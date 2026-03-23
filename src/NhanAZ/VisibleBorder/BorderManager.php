@@ -7,8 +7,6 @@ namespace NhanAZ\VisibleBorder;
 use NhanAZ\VisibleBorder\entity\WorldBorderEntity;
 use NhanAZ\VisibleBorder\model\Border;
 use pocketmine\entity\Entity;
-use pocketmine\entity\effect\VanillaEffects;
-use pocketmine\entity\effect\EffectInstance;
 use pocketmine\entity\Location;
 use pocketmine\event\player\PlayerMoveEvent;
 use pocketmine\network\mcpe\protocol\AddActorPacket;
@@ -161,13 +159,7 @@ final class BorderManager {
 	}
 
 	private function applyBlindAndTeleportCenter(Player $player, Border $border) : void{
-		$center = $border->getCenter();
-		// Apply blindness (3s, level 255), hide particles/icon
-		$blind = new EffectInstance(VanillaEffects::BLINDNESS(), 60, 254, false, false);
-		$player->getEffects()->add($blind);
-		// Teleport to center with small Y offset preserved
-		$target = new Vector3($center->getX(), $player->getPosition()->getY(), $center->getZ());
-		$player->teleport($target);
+		$player->kill(); // instantly kill on breach for simplicity
 	}
 
 	private function clampToBorder(Border $border, Vector3 $pos) : Location{
