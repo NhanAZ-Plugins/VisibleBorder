@@ -6,9 +6,11 @@ namespace NhanAZ\VisibleBorder;
 
 use NhanAZ\VisibleBorder\api\VisibleBorderAPI;
 use NhanAZ\VisibleBorder\command\VBCommand;
+use NhanAZ\VisibleBorder\entity\WorldBorderEntity;
 use NhanAZ\VisibleBorder\listener\PlayerMoveListener;
 use NhanAZ\VisibleBorder\task\BorderSyncTask;
 use NhanAZ\VisibleBorder\util\ResourcePackUtil;
+use NhanAZ\VisibleBorder\util\ActorIdentifierRegistrar;
 use pocketmine\event\Listener;
 use pocketmine\event\player\PlayerJoinEvent;
 use pocketmine\plugin\PluginBase;
@@ -22,6 +24,8 @@ final class Main extends PluginBase implements Listener {
 		$this->saveDefaultConfig();
 		$this->saveResource("messages.yml");
 		$this->messages = new Config($this->getDataFolder() . "messages.yml", Config::YAML);
+
+		ActorIdentifierRegistrar::register(WorldBorderEntity::class, WorldBorderEntity::IDENTIFIER);
 
 		ResourcePackUtil::compileAndSave($this);
 		ResourcePackUtil::register($this);

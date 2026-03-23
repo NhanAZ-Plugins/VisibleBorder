@@ -414,9 +414,18 @@ final class BorderManager {
 		}
 		$key = $this->makeKey($player->getWorld(), $border->getId());
 		$pid = $player->getId();
-		$center = new Vector3($border->getCenter()->getX(), $player->getPosition()->getY(), $border->getCenter()->getZ());
-		$rid = $this->activeBorders[$pid][$key] ?? null;
+		$center = new Vector3(
+			$border->getCenter()->getX(),
+			$border->getCenter()->getY(),
+			$border->getCenter()->getZ()
+		);
 
+		// Always respawn fresh actor to avoid protocol mismatches across PMMP versions
+		if(isset($this->activeBorders[$pid][$key])){
+			$player->getNetworkSession()->sendDataPacket(RemoveActorPacket::create($this->activeBorders[$pid][$key]));
+		}
+
+		$rid = Entity::nextRuntimeId();
 		$meta = new EntityMetadataCollection();
 		$targetDiameter = ($border->getSize() + self::MODEL_OFFSET) * 2.0;
 		$scale = max(0.01, $targetDiameter / self::MODEL_BASE_DIAMETER);
@@ -429,34 +438,23 @@ final class BorderManager {
 		$meta->setFloat(EntityMetadataProperties::BOUNDING_BOX_WIDTH, PHP_FLOAT_MIN);
 		$meta->setFloat(EntityMetadataProperties::BOUNDING_BOX_HEIGHT, PHP_FLOAT_MIN);
 
-		if($rid === null){
-			$rid = Entity::nextRuntimeId();
-			$pk = AddActorPacket::create(
-				$rid,
-				$rid,
-				WorldBorderEntity::IDENTIFIER,
-				$center,
-				null,
-				0.0,
-				0.0,
-				0.0,
-				0.0,
-				[],
-				$meta->getAll(),
-				new PropertySyncData([], []),
-				[]
-			);
-			$player->getNetworkSession()->sendDataPacket($pk);
-			$this->activeBorders[$pid][$key] = $rid;
-		}else{
-			$player->getNetworkSession()->sendDataPacket(
-				SetActorDataPacket::create($rid, $meta->getAll(), new PropertySyncData([], []), 0)
-			);
-			if($forceMove){
-				$flags = MoveActorAbsolutePacket::FLAG_GROUND | MoveActorAbsolutePacket::FLAG_TELEPORT;
-				$player->getNetworkSession()->sendDataPacket(MoveActorAbsolutePacket::create($rid, $center, 0.0, 0.0, $flags));
-			}
-		}
+		$pk = AddActorPacket::create(
+			$rid,
+			$rid,
+			WorldBorderEntity::IDENTIFIER,
+			$center,
+			null,
+			0.0,
+			0.0,
+			0.0,
+			0.0,
+			[],
+			$meta->getAll(),
+			new PropertySyncData([], []),
+			[]
+		);
+		$player->getNetworkSession()->sendDataPacket($pk);
+		$this->activeBorders[$pid][$key] = $rid;
 	}
 
 	private function loadBorders() : void{

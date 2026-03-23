@@ -56,6 +56,85 @@ Bypass permission: `visibleborder.bypass` (ignores collision/damage/knockback).
 
 ---
 
+## Practical Scenarios (apply every command)
+
+### 1) Basic protected spawn
+```
+/vb create spawn
+/vb set spawn size 32
+/vb set spawn center           # uses your position (snaps to .5/.5)
+/vb set spawn solid true
+```
+Result: solid circular border; movement is clamped at radius 32.
+
+### 2) PvP arena shrink
+```
+/vb create arena
+/vb set arena size 100
+/vb set arena center 0 0
+/vb set arena solid true
+/vb set arena speed 2           # default shrink speed (blocks/s)
+/vb set arena size 10           # no seconds given → uses speed to compute duration
+/vb set arena onzero kill
+```
+Result: battle-royale style shrink to radius 10; if zero is reached, players are killed.
+
+### 3) Timed event zone
+```
+/vb create event
+/vb set event size 40
+/vb set event lifetime 600      # 10 minutes
+```
+Result: border auto-removes after 10 minutes.
+
+### 4) Soft warning zone (no solid wall)
+```
+/vb create warning
+/vb set warning size 50
+/vb set warning solid false
+/vb set warning knockback power 1.2
+/vb set warning knockback distance 0.5
+/vb set warning knockback delay 1.0
+/vb set warning damage amount 2
+/vb set warning damage distance 1.5
+/vb set warning damage delay 2
+```
+Result: outside players are pushed back and take 2 damage every 2s when 1.5 blocks beyond radius 50.
+
+### 5) Minimum size & freeze at zero
+```
+/vb create cage
+/vb set cage size 8
+/vb set cage minsize 3
+/vb set cage onzero freeze
+```
+Result: size never goes below 3; if it ever hits 0, players are frozen.
+
+### 6) Multi-border cleanup
+```
+/vb list
+/vb clear
+/vb create north
+/vb create south
+/vb set north center 0 -200
+/vb set south center 0 200
+```
+Result: two separate borders; `clear` wipes all in the current world.
+
+### Argument reference (what each parameter means)
+- `<id>`: unique per world (string, case-sensitive).
+- `size <value>`: radius (float). `size <target> <seconds>` animates; if `<seconds>` omitted and `speed` set, duration = distance / speed.
+- `minsize <value>`: lower bound for all size changes.
+- `lifetime <seconds>`: auto-remove after duration; 0 disables.
+- `center`: use player position (snaps to X/Z .5). `center <x> <z>` sets exact coords (Y stays stored).
+- `solid <true/false>`: when true, movement clamped to radius; when false, only damage/knockback apply.
+- `speed <blocks/s>`: default shrink speed when no duration is provided.
+- `damage amount|distance|delay`: hearts to remove, how far outside it starts, and per-player cooldown.
+- `knockback power|distance|delay`: motion strength, start distance, and cooldown.
+- `onzero <kill|freeze|damage <amount>>`: action when radius reaches 0.
+
+---
+
 ## Configuration
 File: `resources/config.yml`
 ```yaml
