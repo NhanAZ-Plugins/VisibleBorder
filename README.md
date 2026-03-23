@@ -36,9 +36,9 @@ Bypass permission: `visibleborder.bypass` (ignores collision/knockback).
 ---
 
 ## Behaviour
-- Solid=true: players cannot exit or enter; attempts are clamped to the border and knocked back.
-- Solid=false: border is visual only (no movement enforcement).
-- Knockback is applied horizontally with a small distance cushion to prevent clipping.
+- Solid=true: players cannot exit or enter; attempts result in instant death.
+- Solid=false: border is visual only (no enforcement).
+- Sync task pulls stationary players back into compliance each tick.
 
 ---
 
@@ -83,4 +83,3 @@ Methods:
 - Border invisible: relog to reload the resource pack; ensure plugin registered (see console).
 - Knockback not working: ensure `solid` is true and you don’t have `visibleborder.bypass`.
 - Pack cache issues: delete `plugin_data/VisibleBorder/VisibleBorder.mcpack` and restart.
-
