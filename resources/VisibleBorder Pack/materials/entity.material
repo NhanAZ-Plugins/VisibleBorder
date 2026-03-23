@@ -1,0 +1,31 @@
+{
+	"materials": {
+		"version": "1.0.0",
+		"custom_world_border": {
+			"+defines": [
+				"USE_UV_ANIM"
+			],
+			"+samplerStates": [
+				{
+					"samplerIndex": 0,
+					"textureFilter": "Point"
+				}
+			],
+			"depthFunc": "LessEqual",
+			"msaaSupport": "Both",
+			"+states": [
+				"DisableCulling",
+				"Blending",
+				"DisableDepthWrite"
+			],
+			"vertexShader": "shaders/entity.vertex",
+			"vrGeometryShader": "shaders/entity.geometry",
+			"fragmentShader": "shaders/entity.fragment",
+			"vertexFields": [
+				{"field": "Position"},
+				{"field": "Normal"},
+				{"field": "UV0"}
+			]
+		}
+	}
+}

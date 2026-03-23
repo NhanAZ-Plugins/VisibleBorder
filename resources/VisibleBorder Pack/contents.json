@@ -1,0 +1,10 @@
+{
+  "content": [
+    {"path": "entity/visibleborder/world_border.json"},
+    {"path": "models/entity/visibleborder/world_border.json"},
+    {"path": "render_controllers/visibleborder/world_border.json"},
+    {"path": "materials/entity.material"},
+    {"path": "textures/entity/visibleborder/world_border.png"},
+    {"path": "pack_icon.png"}
+  ]
+}

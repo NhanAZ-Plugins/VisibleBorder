@@ -1,0 +1,16 @@
+---
+name: VisibleBorder
+main: NhanAZ\VisibleBorder\Main
+version: 1.0.0
+api: 5.0.0
+description: Show a visible world border using a custom resource pack and client-only entity.
+permissions:
+  visibleborder.command:
+    default: op
+    description: Allow using /border commands
+  visibleborder.bypass:
+    default: op
+    description: Bypass border restrictions
+provides:
+  - visibleborderapi
+...
