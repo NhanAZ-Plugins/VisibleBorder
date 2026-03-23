@@ -162,8 +162,8 @@ final class BorderManager {
 
 	private function applyBlindAndTeleportCenter(Player $player, Border $border) : void{
 		$center = $border->getCenter();
-		// Apply brief blindness without particles to signal block
-		$blind = new EffectInstance(VanillaEffects::BLINDNESS(), 20, 0, false, false); // 1s, no particles
+		// Apply blindness (3s, level 255), hide particles/icon
+		$blind = new EffectInstance(VanillaEffects::BLINDNESS(), 60, 254, false, false);
 		$player->getEffects()->add($blind);
 		// Teleport to center with small Y offset preserved
 		$target = new Vector3($center->getX(), $player->getPosition()->getY(), $center->getZ());
