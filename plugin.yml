@@ -7,10 +7,10 @@ description: Show a visible world border using a custom resource pack and client
 permissions:
   visibleborder.command:
     default: op
-    description: Allow using /border commands
+    description: Allow using /vb management commands
   visibleborder.bypass:
     default: op
-    description: Bypass border restrictions
+    description: Bypass border collision/damage
 provides:
   - visibleborderapi
 ...

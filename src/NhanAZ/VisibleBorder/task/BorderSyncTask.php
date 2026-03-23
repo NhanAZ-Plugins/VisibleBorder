@@ -8,15 +8,14 @@ use NhanAZ\VisibleBorder\BorderManager;
 use pocketmine\scheduler\Task;
 use pocketmine\Server;
 
-class BorderSyncTask extends Task {
+final class BorderSyncTask extends Task {
 	public function __construct(private BorderManager $manager){
 	}
 
 	public function onRun() : void{
 		foreach(Server::getInstance()->getOnlinePlayers() as $player){
-			if(!$this->manager->hasBorder($player)){
-				$this->manager->spawnBorder($player);
-			}
+			$this->manager->syncPlayerBorders($player);
+			$this->manager->tickPlayer($player);
 		}
 	}
 }

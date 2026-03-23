@@ -1,0 +1,14 @@
+defaults:
+  min_size: 1.0
+  solid: true
+  damage:
+    amount: 1.0
+    distance: 1.0
+    delay: 1.0
+  knockback:
+    power: 0.6
+    distance: 0.5
+    delay: 0.5
+  on_zero: "kill"
+  speed: 0.0
+sync-interval-ticks: 40
