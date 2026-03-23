@@ -1,0 +1,28 @@
+skywars:
+  pvp: true
+  pvp_grace: 30
+  hunger: false
+  block_break: false
+  block_place: true
+  gamemode: survival
+  gamemode_restore: true
+  effect_clear: true
+lobby:
+  pvp: false
+  hunger: false
+  block_place: false
+  block_break: false
+  gamemode: adventure
+  gamemode_restore: true
+pvparena:
+  pvp: true
+  hunger: true
+  block_place: true
+  block_break: true
+  gamemode: survival
+safe:
+  pvp: false
+  hunger: false
+  block_place: false
+  block_break: false
+  gamemode: adventure

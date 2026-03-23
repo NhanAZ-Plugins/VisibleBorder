@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace NhanAZ\VisibleBorder\command;
 
 use NhanAZ\VisibleBorder\BorderManager;
+use NhanAZ\VisibleBorder\command\VBRuleCommand;
 use pocketmine\command\Command;
 use pocketmine\command\CommandSender;
 use pocketmine\math\Vector3;
@@ -16,7 +17,8 @@ use RuntimeException;
 final class VBCommand extends Command {
 	public function __construct(
 		private BorderManager $manager,
-		private Config $messages
+		private Config $messages,
+		private VBRuleCommand $ruleCommand
 	){
 		parent::__construct("vb", "VisibleBorder management", "/vb help");
 		$this->setPermission("visibleborder.command");
@@ -31,6 +33,11 @@ final class VBCommand extends Command {
 			return true;
 		}
 		$sub = strtolower($args[0] ?? "help");
+		if(in_array($sub, ["rule", "preset"], true)){
+			if($this->ruleCommand->handle($sender, $args)){
+				return true;
+			}
+		}
 		try{
 			return match($sub){
 				"create" => $this->create($sender, $args),

@@ -76,6 +76,7 @@ final class BorderManager {
 			$this->getDefaultFloat("knockback.distance"),
 			$this->getDefaultFloat("knockback.delay"),
 			(string)$this->defaults["on_zero"] ?? "kill",
+			[],
 			null
 		);
 
@@ -296,6 +297,11 @@ final class BorderManager {
 
 	public function getDefaults() : array{
 		return $this->defaults;
+	}
+
+	public function updateBorder(Border $border) : void{
+		$this->borders[$border->getWorldName()][$border->getId()] = $border;
+		$this->saveBorders();
 	}
 
 	private function handleZeroSize(Border $border, World $world) : void{

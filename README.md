@@ -56,6 +56,19 @@ Bypass permission: `visibleborder.bypass` (ignores collision/damage/knockback).
 
 ---
 
+## Zone Rules & Presets
+Rules apply only to players inside the border. Use `/vb rule ...` and `/vb preset ...`.
+
+- `/vb rule <id> pvp <true/false>` — toggle PvP; `/vb rule <id> pvp grace <seconds>` for a grace period.
+- `/vb rule <id> hunger <true/false>` — disable/enable hunger drain; `hunger freeze <0-20>` locks food level.
+- `/vb rule <id> block place|break|all <true/false>` — control placing/breaking; `block whitelist|blacklist <blockId>` for per-block exceptions.
+- `/vb rule <id> gamemode <survival|creative|adventure|spectator>` — force on enter; `gamemode restore <true/false>` restores on exit.
+- `/vb rule <id> effect add <effectId> <amplifier> <seconds>` — apply effects; `effect clear` removes all on enter.
+- `/vb rule <id> list` — show active rules; `/vb rule <id> reset` — clear rules.
+- `/vb preset <id> <skywars|lobby|pvparena|safe>` — apply a preset from `presets.yml` (editable).
+
+---
+
 ## Practical Scenarios (apply every command)
 
 ### 1) Basic protected spawn
@@ -120,6 +133,70 @@ Result: size never goes below 3; if it ever hits 0, players are frozen.
 /vb set south center 0 200
 ```
 Result: two separate borders; `clear` wipes all in the current world.
+
+### 7) SkyWars-style match (preset + grace)
+```
+/vb create sky
+/vb preset sky skywars          # applies pvp on, grace 30s, hunger off, block-break off, survival
+/vb set sky center              # center at your cage area
+```
+Result: Grace period blocks PvP for 30s; players keep hunger; block-breaking disabled outside whitelisted blocks.
+
+### 8) Lobby protection (no build, no PvP, adventure)
+```
+/vb create lobby
+/vb preset lobby lobby
+/vb set lobby center 0 0
+/vb set lobby size 80
+```
+Result: PvP off, no place/break, hunger off, forced adventure with restore on exit.
+
+### 9) PvP arena with effects
+```
+/vb create arena
+/vb set arena size 60
+/vb rule arena effect clear                 # clear all on enter
+/vb rule arena effect add 1 1 120           # Speed II for 120s
+/vb rule arena pvp true
+/vb rule arena hunger true
+/vb rule arena gamemode survival
+```
+Result: everyone inside gets Speed II; PvP/hunger enabled.
+
+### 10) Block whitelist for building islands
+```
+/vb create islands
+/vb set islands size 120
+/vb rule islands block all true             # disable both place & break
+/vb rule islands block whitelist 1          # allow stone place/break (example id)
+/vb rule islands block whitelist 5          # allow oak planks
+```
+Result: Only stone and planks can be placed/broken; everything else blocked.
+
+### 11) Hunger freeze mini-game
+```
+/vb create parkour
+/vb set parkour size 40
+/vb rule parkour hunger false
+/vb rule parkour hunger freeze 20
+```
+Result: Hunger never drains and stays full inside the course.
+
+### 12) Gamemode force with restore
+```
+/vb create build
+/vb set build size 50
+/vb rule build gamemode creative
+/vb rule build gamemode restore true
+```
+Result: Players become creative inside; revert to previous gamemode when they leave.
+
+### 13) Rule overview and reset
+```
+/vb rule sky list
+/vb rule sky reset
+```
+Result: shows all active rules, then clears them.
 
 ### Argument reference (what each parameter means)
 - `<id>`: unique per world (string, case-sensitive).

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace NhanAZ\VisibleBorder\api;
 
 use NhanAZ\VisibleBorder\BorderManager;
+use NhanAZ\VisibleBorder\ZoneRuleManager;
 use NhanAZ\VisibleBorder\model\Border;
 use pocketmine\math\Vector3;
 use pocketmine\player\Player;
@@ -14,11 +15,14 @@ use RuntimeException;
 final class VisibleBorderAPI {
 	private static ?self $instance = null;
 
-	private function __construct(private BorderManager $manager){
+	private function __construct(
+		private BorderManager $manager,
+		private ZoneRuleManager $rules
+	){
 	}
 
-	public static function init(BorderManager $manager) : void{
-		self::$instance = new self($manager);
+	public static function init(BorderManager $manager, ZoneRuleManager $rules) : void{
+		self::$instance = new self($manager, $rules);
 	}
 
 	public static function get() : self{
@@ -80,5 +84,40 @@ final class VisibleBorderAPI {
 	 */
 	public function isInsideBorder(Player $player, string $id) : bool{
 		return $this->manager->isInsideBorder($player, $id);
+	}
+
+	/**
+	 * Set a zone rule value for a border.
+	 */
+	public function setRule(string $borderId, World $world, string $rule, mixed $value) : void{
+		$this->rules->setRule($borderId, $world, $rule, $value);
+	}
+
+	/**
+	 * Get a rule value (null if not set).
+	 */
+	public function getRule(string $borderId, World $world, string $rule) : mixed{
+		return $this->rules->getRule($borderId, $world, $rule);
+	}
+
+	/**
+	 * Reset all rules for a border.
+	 */
+	public function resetRules(string $borderId, World $world) : void{
+		$this->rules->resetRules($borderId, $world);
+	}
+
+	/**
+	 * Apply a named preset to a border.
+	 */
+	public function applyPreset(string $borderId, World $world, string $preset) : void{
+		$this->rules->applyPreset($borderId, $world, $preset);
+	}
+
+	/**
+	 * Get all rule data for a border.
+	 */
+	public function getRulesForBorder(string $borderId, World $world) : array{
+		return $this->rules->getRulesForBorder($borderId, $world);
 	}
 }

@@ -22,6 +22,7 @@ final class Border {
 		private float $knockbackDistance,
 		private float $knockbackDelay,
 		private string $onZeroAction,
+		private array $rules = [],
 		private ?int $expiresAt = null
 	){}
 
@@ -129,6 +130,18 @@ final class Border {
 		$this->onZeroAction = $action;
 	}
 
+	public function getRules() : array{
+		return $this->rules;
+	}
+
+	public function setRules(array $rules) : void{
+		$this->rules = $rules;
+	}
+
+	public function setRule(string $key, mixed $value) : void{
+		$this->rules[$key] = $value;
+	}
+
 	public function getExpiresAt() : ?int{
 		return $this->expiresAt;
 	}
@@ -159,6 +172,7 @@ final class Border {
 				"delay" => $this->knockbackDelay
 			],
 			"on_zero" => $this->onZeroAction,
+			"rules" => $this->rules,
 			"expires_at" => $this->expiresAt
 		];
 	}
@@ -185,6 +199,7 @@ final class Border {
 			(float)($data["knockback"]["distance"] ?? 1.0),
 			(float)($data["knockback"]["delay"] ?? 1.0),
 			(string)($data["on_zero"] ?? "kill"),
+			(array)($data["rules"] ?? []),
 			isset($data["expires_at"]) ? (int)$data["expires_at"] : null
 		);
 	}
