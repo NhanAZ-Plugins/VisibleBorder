@@ -6,21 +6,17 @@ namespace NhanAZ\VisibleBorder;
 
 use NhanAZ\VisibleBorder\entity\WorldBorderEntity;
 use NhanAZ\VisibleBorder\model\Border;
-use NhanAZ\VisibleBorder\BorderShrinkTask;
 use pocketmine\entity\Entity;
 use pocketmine\entity\Location;
 use pocketmine\event\player\PlayerMoveEvent;
 use pocketmine\network\mcpe\protocol\AddActorPacket;
 use pocketmine\network\mcpe\protocol\MoveActorAbsolutePacket;
 use pocketmine\network\mcpe\protocol\RemoveActorPacket;
-use pocketmine\network\mcpe\protocol\SetActorDataPacket;
 use pocketmine\network\mcpe\protocol\types\entity\EntityMetadataCollection;
 use pocketmine\network\mcpe\protocol\types\entity\EntityMetadataFlags;
 use pocketmine\network\mcpe\protocol\types\entity\EntityMetadataProperties;
 use pocketmine\network\mcpe\protocol\types\entity\PropertySyncData;
 use pocketmine\player\Player;
-use pocketmine\scheduler\ClosureTask;
-use pocketmine\scheduler\TaskHandler;
 use pocketmine\utils\Config;
 use pocketmine\world\World;
 use pocketmine\math\Vector3;
@@ -29,55 +25,32 @@ use RuntimeException;
 final class BorderManager {
 	private const STORAGE_FILE = "borders.yml";
 	private const MODEL_BASE_DIAMETER = 3.4;
-	private const MODEL_OFFSET = 1.0; // outward bias so visual border sits about 1 block outside collision radius
+	private const MODEL_OFFSET = 1.0;
+	private const KNOCKBACK_POWER = 0.8;
+	private const KNOCKBACK_DISTANCE = 0.5;
 
 	/** @var array<string,array<string,Border>> worldName => id => Border */
 	private array $borders = [];
 	/** @var array<int,array<string,int>> playerId => borderKey => runtimeId */
 	private array $activeBorders = [];
-	/** @var array<string,TaskHandler> */
-	private array $shrinkTasks = [];
-	/** @var array<string,TaskHandler> */
-	private array $lifetimeTasks = [];
-	/** @var array<int,array<string,float>> */
-	private array $damageCooldowns = [];
-	/** @var array<int,array<string,float>> */
-	private array $knockbackCooldowns = [];
 
-	private array $defaults;
 	private Config $storage;
 
 	public function __construct(private Main $plugin){
-		$this->defaults = $plugin->getConfig()->get("defaults", []);
 		$this->storage = new Config($plugin->getDataFolder() . self::STORAGE_FILE, Config::YAML);
 		$this->loadBorders();
-		$this->restoreLifetimes();
 	}
 
 	public function createBorder(string $id, World $world, float $size, Vector3 $center) : Border{
-		$key = $this->makeKey($world, $id);
 		if(isset($this->borders[$world->getFolderName()][$id])){
 			throw new RuntimeException("Border '{$id}' already exists in world '{$world->getFolderName()}'.");
 		}
-		$minSize = max($this->getDefaultFloat("min_size") ?: 1.0, 0.0001);
-		$size = max($size, $minSize);
 		$border = new Border(
 			$id,
 			$world->getFolderName(),
-			$size,
-			$minSize,
-			$this->getDefaultFloat("speed"),
+			max(0.1, $size),
 			$this->snapCenter($center),
-			$this->getDefaultBool("solid"),
-			$this->getDefaultFloat("damage.amount"),
-			$this->getDefaultFloat("damage.distance"),
-			$this->getDefaultFloat("damage.delay"),
-			$this->getDefaultFloat("knockback.power"),
-			$this->getDefaultFloat("knockback.distance"),
-			$this->getDefaultFloat("knockback.delay"),
-			(string)$this->defaults["on_zero"] ?? "kill",
-			[],
-			null
+			true
 		);
 
 		$this->borders[$world->getFolderName()][$id] = $border;
@@ -91,8 +64,6 @@ final class BorderManager {
 			return false;
 		}
 		$border = $this->borders[$world->getFolderName()][$id];
-		$this->cancelShrink($border);
-		$this->cancelLifetime($border);
 		$this->despawnBorderForWorld($world, $border);
 		unset($this->borders[$world->getFolderName()][$id]);
 		$this->saveBorders();
@@ -114,76 +85,11 @@ final class BorderManager {
 		return array_values($this->borders[$world->getFolderName()] ?? []);
 	}
 
-	public function shrinkBorder(string $id, World $world, float $targetSize, float $seconds) : void{
-		$border = $this->requireBorder($id, $world);
-		$targetSize = max($targetSize, $border->getMinSize()); // FIXED: minSize clamp
-		$this->cancelShrink($border);
-
-		$ev = new \NhanAZ\VisibleBorder\event\BorderShrinkEvent($world->getFolderName(), $targetSize); // FIXED: dispatch BorderShrinkEvent
-		$ev->call(); // FIXED: dispatch BorderShrinkEvent
-		if($ev->isCancelled()){ return; } // FIXED: support cancellation
-
-		$targetSize = $ev->getNewRadius(); // FIXED: apply modified event target size
-		$startSize = $border->getSize();
-		$delta = $targetSize - $startSize;
-		if($seconds <= 0 && $border->getSpeed() > 0){
-			$seconds = abs($delta) / $border->getSpeed(); // use stored speed when no duration is given
-		}
-		$perTick = $seconds <= 0 ? $delta : ($delta / ($seconds * 20));
-		$key = $this->makeKey($world, $id);
-
-		$worldName = $world->getFolderName(); // FIXED: Decoupled strong World reference to prevent GC leaks
-		$handler = $this->plugin->getScheduler()->scheduleRepeatingTask(new BorderShrinkTask(
-			function(float $newSize) use ($border, $worldName) : void{
-				$w = $this->plugin->getServer()->getWorldManager()->getWorldByName($worldName); // FIXED: fetch safe world ref
-				if($w === null){ return; } // FIXED: safe skip if world unloaded
-				$border->setSize(max($border->getMinSize(), $newSize)); // FIXED: minSize clamp during shrink
-				$this->updateBorderVisual($border, $w);
-				$this->handleZeroSize($border, $w);
-			},
-			function() use ($key) : void{
-				$this->saveBorders(); // FIXED: migrate saveBorders to onComplete to stop per-tick I/O lag
-				unset($this->shrinkTasks[$key]);
-			},
-			$startSize,
-			$targetSize,
-			$perTick
-		), 1);
-
-		$this->shrinkTasks[$key] = $handler;
-	}
-
-	public function setBorderLifetime(string $id, World $world, float $seconds) : void{
-		$border = $this->requireBorder($id, $world);
-		$this->cancelLifetime($border);
-
-		if($seconds <= 0){
-			$border->setExpiresAt(null);
-			$this->saveBorders();
-			return;
-		}
-		$expiry = time() + (int)$seconds;
-		$border->setExpiresAt($expiry);
-		$this->saveBorders();
-
-		$key = $this->makeKey($world, $id);
-		$worldName = $world->getFolderName(); // FIXED: Decoupled strong World reference from delayed task
-		$this->lifetimeTasks[$key] = $this->plugin->getScheduler()->scheduleDelayedTask(new ClosureTask(
-			function() use ($id, $worldName) : void{
-				$w = $this->plugin->getServer()->getWorldManager()->getWorldByName($worldName); // FIXED: safe world lookup string reference
-				if($w !== null){ // FIXED: Only remove if world is still loaded to avoid Exception
-					$this->removeBorder($id, $w); // FIXED: lifetime expiry auto-removal
-				} // FIXED: Block wrapper end
-			}
-		), (int)($seconds * 20));
-	}
-
 	public function setBorderSize(string $id, World $world, float $size) : void{
 		$border = $this->requireBorder($id, $world);
-		$border->setSize(max($size, $border->getMinSize())); // FIXED: minSize clamp
+		$border->setSize(max(0.1, $size));
 		$this->saveBorders();
-		$this->updateBorderVisual($border, $world);
-		$this->handleZeroSize($border, $world);
+		$this->updateBorderVisual($border, $world, true);
 	}
 
 	public function setBorderCenter(string $id, World $world, Vector3 $center) : void{
@@ -193,47 +99,9 @@ final class BorderManager {
 		$this->updateBorderVisual($border, $world, true);
 	}
 
-	public function setBorderMinSize(string $id, World $world, float $minSize) : void{
-		$border = $this->requireBorder($id, $world);
-		$border->setMinSize($minSize);
-		if($border->getSize() < $minSize){
-			$border->setSize($minSize); // FIXED: minSize clamp after change
-		}
-		$this->saveBorders();
-		$this->updateBorderVisual($border, $world);
-	}
-
-	public function setBorderSpeed(string $id, World $world, float $speed) : void{
-		$border = $this->requireBorder($id, $world);
-		$border->setSpeed($speed);
-		$this->saveBorders();
-	}
-
 	public function setBorderSolid(string $id, World $world, bool $solid) : void{
 		$border = $this->requireBorder($id, $world);
 		$border->setSolid($solid);
-		$this->saveBorders();
-	}
-
-	public function setDamageConfig(string $id, World $world, float $amount, float $distance, float $delay) : void{
-		$border = $this->requireBorder($id, $world);
-		$border->setDamageAmount($amount);
-		$border->setDamageDistance($distance);
-		$border->setDamageDelay($delay);
-		$this->saveBorders();
-	}
-
-	public function setKnockbackConfig(string $id, World $world, float $power, float $distance, float $delay) : void{
-		$border = $this->requireBorder($id, $world);
-		$border->setKnockbackPower($power);
-		$border->setKnockbackDistance($distance);
-		$border->setKnockbackDelay($delay);
-		$this->saveBorders();
-	}
-
-	public function setOnZeroAction(string $id, World $world, string $action) : void{
-		$border = $this->requireBorder($id, $world);
-		$border->setOnZeroAction($action);
 		$this->saveBorders();
 	}
 
@@ -251,29 +119,24 @@ final class BorderManager {
 		if($to === null){
 			return;
 		}
-		$worldName = $player->getWorld()->getFolderName();
-		foreach($this->borders[$worldName] ?? [] as $border){
-			$inside = $this->isInside($border, $to);
-			if($inside){
-				continue;
+		foreach($this->borders[$player->getWorld()->getFolderName()] ?? [] as $border){
+			$insideTo = $this->isInside($border, $to);
+			$insideFrom = $this->isInside($border, $event->getFrom());
+
+			if($border->isSolid()){
+				if($insideFrom && !$insideTo){
+					// prevent leaving
+					$event->cancel();
+					$clamped = $this->clampToBorder($border, $to);
+					$event->setTo($clamped);
+					$this->applyKnockback($player, $border, false); // push back in
+				}elseif(!$insideFrom && $insideTo){
+					// prevent entering
+					$event->cancel();
+					$event->setTo($event->getFrom());
+					$this->applyKnockback($player, $border, true); // push out
+				}
 			}
-
-			if($border->isSolid() && !$player->hasPermission("visibleborder.bypass")){
-				// FIXED: trapped when border shrinks too fast
-				$clamped = $this->clampToBorder($border, $to);
-				$event->cancel();
-				$event->setTo($clamped);
-			}
-
-			$this->applyKnockback($player, $border);
-			$this->applyDamage($player, $border);
-		}
-	}
-
-	public function syncPlayerBorders(Player $player) : void{
-		$world = $player->getWorld();
-		foreach($this->borders[$world->getFolderName()] ?? [] as $border){
-			$this->spawnBorderForPlayer($player, $border);
 		}
 	}
 
@@ -282,110 +145,31 @@ final class BorderManager {
 			return;
 		}
 		$pos = $player->getLocation();
-		$worldName = $player->getWorld()->getFolderName();
-		foreach($this->borders[$worldName] ?? [] as $border){
-			if($this->isInside($border, $pos)){
-				continue;
-			}
-			if($border->isSolid()){
-				$clamped = $this->clampToBorder($border, $pos);
-				$player->teleport($clamped); // FIXED: trapped when stationary outside after shrink
-			}
-			$this->applyKnockback($player, $border);
-			$this->applyDamage($player, $border);
-		}
-	}
-
-	public function despawnForPlayer(Player $player) : void{
-		$pid = $player->getId();
-		if(!isset($this->activeBorders[$pid])){
-			return;
-		}
-		foreach($this->activeBorders[$pid] as $rid){
-			$player->getNetworkSession()->sendDataPacket(RemoveActorPacket::create($rid));
-		}
-		unset($this->activeBorders[$pid]);
-	}
-
-	public function handleQuit(Player $player) : void{ // FIXED: added handler to cleanse lingering memory leaks on disconnect
-		$pid = $player->getId(); // FIXED: fetch mapped identifier
-		unset($this->activeBorders[$pid], $this->damageCooldowns[$pid], $this->knockbackCooldowns[$pid]); // FIXED: successfully wipe out all player mappings inside manager
-	} // FIXED: Closed handler footprint
-
-	public function getDefaults() : array{
-		return $this->defaults;
-	}
-
-	public function updateBorder(Border $border) : void{
-		$this->borders[$border->getWorldName()][$border->getId()] = $border;
-		$this->saveBorders();
-	}
-
-	private function handleZeroSize(Border $border, World $world) : void{
-		if($border->getSize() > 0){
-			return;
-		}
-		foreach($world->getPlayers() as $player){
-			if(!$player->isOnline() || $player->hasPermission("visibleborder.bypass")){ // FIXED: Exempt bypass users from zero-size punishments
-				continue;
-			}
-			switch(true){
-				case $border->getOnZeroAction() === "kill":
-					$player->kill(); // FIXED: size=0 kill action
-					break;
-				case $border->getOnZeroAction() === "freeze":
-					$player->setImmobile(true); // FIXED: size=0 freeze action
-					break;
-				default:
-					if(str_starts_with($border->getOnZeroAction(), "damage")){
-						$parts = explode(" ", $border->getOnZeroAction());
-						$amount = isset($parts[1]) ? (float)$parts[1] : 1.0;
-						$player->setHealth(max(0.0, $player->getHealth() - $amount)); // FIXED: size=0 damage action
-					}
-					break;
+		foreach($this->borders[$player->getWorld()->getFolderName()] ?? [] as $border){
+			$inside = $this->isInside($border, $pos);
+			if($border->isSolid() && !$inside){
+				$player->teleport($this->clampToBorder($border, $pos));
+				$this->applyKnockback($player, $border, true);
 			}
 		}
-		$this->removeBorder($border->getId(), $world);
 	}
 
-	private function applyDamage(Player $player, Border $border) : void{
-		$distance = $this->distance2D($player->getLocation(), $border->getCenter());
-		if($distance <= $border->getSize() + $border->getDamageDistance()){
-			return;
+	public function syncPlayerBorders(Player $player) : void{
+		foreach($this->borders[$player->getWorld()->getFolderName()] ?? [] as $border){
+			$this->spawnBorderForPlayer($player, $border, true);
 		}
-		$pid = $player->getId();
-		$key = $this->makeKey($player->getWorld(), $border->getId());
-		$now = microtime(true);
-		$next = $this->damageCooldowns[$pid][$key] ?? 0.0;
-		if($now < $next){
-			return; // FIXED: damage delay per player
-		}
-		$this->damageCooldowns[$pid][$key] = $now + max(0.05, $border->getDamageDelay());
-		$player->setHealth(max(0.0, $player->getHealth() - $border->getDamageAmount()));
 	}
 
-	private function applyKnockback(Player $player, Border $border) : void{
-		$distance = $this->distance2D($player->getLocation(), $border->getCenter());
-		if($distance <= $border->getSize() + $border->getKnockbackDistance()){
-			return;
-		}
-		$pid = $player->getId();
-		$key = $this->makeKey($player->getWorld(), $border->getId());
-		$now = microtime(true);
-		$next = $this->knockbackCooldowns[$pid][$key] ?? 0.0;
-		if($now < $next){
-			return; // FIXED: knockback spam cooldown
-		}
-		$this->knockbackCooldowns[$pid][$key] = $now + max(0.05, $border->getKnockbackDelay());
-
+	private function applyKnockback(Player $player, Border $border, bool $pushOut) : void{
 		$dirVec = $player->getPosition()->subtractVector($border->getCenter());
-		$lenSq = $dirVec->getX() ** 2 + $dirVec->getZ() ** 2; // FIXED: precalculate length squared to prevent DivisionByZeroError on normalize
-		if($lenSq <= 0.0001){ // FIXED: safeguard against zero vector normalization
-			$dir = new Vector3(1.0, 0.0, 0.0); // FIXED: fallback outward vector if standing exact center
-		} else { // FIXED: Else block for normal condition
-			$dir = (new Vector3($dirVec->getX(), 0.0, $dirVec->getZ()))->normalize(); // FIXED: Normalize safely
-		} // FIXED: Closed wrapper
-		$player->setMotion($dir->multiply($border->getKnockbackPower()));
+		if(!$pushOut){
+			$dirVec = $dirVec->multiply(-1); // push inward when leaving
+		}
+		$dir = (new Vector3($dirVec->getX(), 0.0, $dirVec->getZ()))->normalize();
+		if($dir->lengthSquared() <= 0){
+			return;
+		}
+		$player->setMotion($dir->multiply(self::KNOCKBACK_POWER));
 	}
 
 	private function clampToBorder(Border $border, Vector3 $pos) : Location{
@@ -394,25 +178,15 @@ final class BorderManager {
 		if($direction->lengthSquared() <= 0){
 			return Location::fromObject($center, $pos->getWorld(), 0.0, 0.0);
 		}
-		$direction = $direction->normalize()->multiply(max(0.0, $border->getSize() - 0.1));
+		$direction = $direction->normalize()->multiply(max(0.0, $border->getSize() - self::KNOCKBACK_DISTANCE));
 		$target = $direction->addVector($center);
 		return Location::fromObject(new Vector3($target->getX(), $pos->getY(), $target->getZ()), $pos->getWorld(), 0.0, 0.0);
 	}
 
 	private function isInside(Border $border, Vector3 $pos) : bool{
-		return $this->distance2D($pos, $border->getCenter()) <= $border->getSize();
-	}
-
-	private function distance2D(Vector3 $a, Vector3 $b) : float{
-		$dx = $a->getX() - $b->getX();
-		$dz = $a->getZ() - $b->getZ();
-		return sqrt($dx * $dx + $dz * $dz);
-	}
-
-	private function updateBorderVisual(Border $border, World $world, bool $move = false) : void{
-		foreach($world->getPlayers() as $player){
-			$this->spawnBorderForPlayer($player, $border, $move);
-		}
+		$dx = $pos->getX() - $border->getCenter()->getX();
+		$dz = $pos->getZ() - $border->getCenter()->getZ();
+		return ($dx * $dx + $dz * $dz) <= ($border->getSize() * $border->getSize());
 	}
 
 	private function spawnBorderForWorld(World $world, Border $border) : void{
@@ -445,22 +219,16 @@ final class BorderManager {
 			$border->getCenter()->getZ()
 		);
 
-		$targetDiameter = ($border->getSize() + self::MODEL_OFFSET) * 2.0; // FIXED: Compute scale early
-		$scale = max(0.01, $targetDiameter / self::MODEL_BASE_DIAMETER); // FIXED: Extracted computation block
+		// Always respawn fresh actor to avoid protocol mismatches
 		if(isset($this->activeBorders[$pid][$key])){
-			$rid = $this->activeBorders[$pid][$key]; // FIXED: capture existing runtime ID
-			if(!$forceMove){ // FIXED: update metadata dynamically without flickering despawns when only sizing
-				$meta = new EntityMetadataCollection(); // FIXED: construct new metadata payload
-				$meta->setFloat(EntityMetadataProperties::SCALE, $scale); // FIXED: append scale value
-				$player->getNetworkSession()->sendDataPacket(SetActorDataPacket::create($rid, $meta->getAll(), new PropertySyncData([], []))); // FIXED: push SetActorDataPacket correctly
-				return; // FIXED: halt execution to prevent total respawn overhead
-			} // FIXED: Proceed with standard respawning below if move required
-			$player->getNetworkSession()->sendDataPacket(RemoveActorPacket::create($rid));
+			$player->getNetworkSession()->sendDataPacket(RemoveActorPacket::create($this->activeBorders[$pid][$key]));
 		}
 
 		$rid = Entity::nextRuntimeId();
 		$meta = new EntityMetadataCollection();
-		$meta->setFloat(EntityMetadataProperties::SCALE, $scale); // FIXED: remapped previous variable computation
+		$targetDiameter = ($border->getSize() + self::MODEL_OFFSET) * 2.0;
+		$scale = max(0.01, $targetDiameter / self::MODEL_BASE_DIAMETER);
+		$meta->setFloat(EntityMetadataProperties::SCALE, $scale);
 		$meta->setGenericFlag(EntityMetadataFlags::INVISIBLE, false);
 		$meta->setGenericFlag(EntityMetadataFlags::HAS_COLLISION, false);
 		$meta->setGenericFlag(EntityMetadataFlags::AFFECTED_BY_GRAVITY, false);
@@ -508,53 +276,6 @@ final class BorderManager {
 		$this->storage->save();
 	}
 
-	private function restoreLifetimes() : void{
-		$now = time();
-		foreach($this->borders as $worldName => $borders){
-			foreach($borders as $id => $border){
-				$expires = $border->getExpiresAt();
-				if($expires !== null){
-					if($expires <= $now){
-						$world = $this->plugin->getServer()->getWorldManager()->getWorldByName($worldName);
-						if($world instanceof World){
-							$this->removeBorder($id, $world);
-						}
-						continue;
-					}
-					$remaining = $expires - $now;
-					$world = $this->plugin->getServer()->getWorldManager()->getWorldByName($worldName);
-					if($world instanceof World){
-						$this->setBorderLifetime($id, $world, (float)$remaining);
-					}
-				}
-			}
-		}
-	}
-
-	private function cancelShrink(Border $border) : void{
-		$key = $this->makeKeyByBorder($border);
-		if(isset($this->shrinkTasks[$key])){
-			$this->shrinkTasks[$key]->cancel();
-			unset($this->shrinkTasks[$key]);
-		}
-	}
-
-	private function cancelLifetime(Border $border) : void{
-		$key = $this->makeKeyByBorder($border);
-		if(isset($this->lifetimeTasks[$key])){
-			$this->lifetimeTasks[$key]->cancel();
-			unset($this->lifetimeTasks[$key]);
-		}
-	}
-
-	private function makeKey(World $world, string $id) : string{
-		return $world->getFolderName() . ":" . $id;
-	}
-
-	private function makeKeyByBorder(Border $border) : string{
-		return $border->getWorldName() . ":" . $border->getId();
-	}
-
 	private function requireBorder(string $id, World $world) : Border{
 		$border = $this->getBorder($id, $world);
 		if($border === null){
@@ -563,26 +284,8 @@ final class BorderManager {
 		return $border;
 	}
 
-	private function getDefaultFloat(string $path) : float{
-		$value = $this->getNestedDefault($path);
-		return (float)$value;
-	}
-
-	private function getDefaultBool(string $path) : bool{
-		$value = $this->getNestedDefault($path);
-		return (bool)$value;
-	}
-
-	private function getNestedDefault(string $path){
-		$parts = explode(".", $path);
-		$cursor = $this->defaults;
-		foreach($parts as $part){
-			if(!isset($cursor[$part])){
-				return null;
-			}
-			$cursor = $cursor[$part];
-		}
-		return $cursor;
+	private function makeKey(World $world, string $id) : string{
+		return $world->getFolderName() . ":" . $id;
 	}
 
 	private function snapCenter(Vector3 $center) : Vector3{
