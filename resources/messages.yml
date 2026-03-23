@@ -9,7 +9,7 @@ help:
   - "§b/vb set <id> size <value> §7- set radius"
   - "§b/vb set <id> center §7- center at your position"
   - "§b/vb set <id> center <x> <z> §7- center by coordinates"
-  - "§b/vb set <id> solid <true/false> §7- toggle collision blocking"
+  - "§b/vb set <id> solid <true/false> §7- when true: crossing the border kills you"
 border-created: "Border {id} created in this world."
 border-removed: "Border {id} removed."
 border-cleared: "All borders in this world have been removed."

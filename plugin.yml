@@ -3,7 +3,8 @@ name: VisibleBorder
 main: NhanAZ\VisibleBorder\Main
 version: 1.0.0
 api: 5.0.0
-description: Minimal visible border with collision blocking and knockback.
+description: Visible world border with configurable size, center, and optional kill-on-cross.
+author: NhanAZ
 permissions:
   visibleborder.command:
     default: op
@@ -11,6 +12,4 @@ permissions:
   visibleborder.bypass:
     default: op
     description: Bypass border restrictions
-provides:
-  - visibleborderapi
 ...

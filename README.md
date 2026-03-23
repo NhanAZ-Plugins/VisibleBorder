@@ -1,6 +1,6 @@
 # VisibleBorder (PM5)
 
-Minimal client-side border with knockback and collision blocking.
+Visible world border with configurable size, center, and optional kill-on-cross.
 
 ---
 
@@ -21,15 +21,15 @@ Minimal client-side border with knockback and collision blocking.
 ## Commands
 All require `visibleborder.command`. In-game help: `/vb`.
 
-- `/vb create <id>` – create a border in the current world (default size 5, center = you).
-- `/vb remove <id>` – delete one border.
-- `/vb clear` – delete all borders in this world.
-- `/vb list` – list borders in this world.
-- `/vb info <id>` – show size/center/solid.
-- `/vb set <id> size <value>` – set radius (blocks).
-- `/vb set <id> center` – center at your position (snaps to .5/.5).
-- `/vb set <id> center <x> <z>` – set center coords.
-- `/vb set <id> solid <true/false>` – toggle collision blocking + knockback.
+- `/vb create <id>` - create a border in the current world (default size 5, center = you).
+- `/vb remove <id>` - delete one border.
+- `/vb clear` - delete all borders in this world.
+- `/vb list` - list borders in this world.
+- `/vb info <id>` - show size/center/solid.
+- `/vb set <id> size <value>` - set radius (blocks).
+- `/vb set <id> center` - center at your position (snaps to .5/.5).
+- `/vb set <id> center <x> <z>` - set center coords.
+- `/vb set <id> solid <true/false>` – toggle collision blocking (if true: crossing = instant death).
 
 Bypass permission: `visibleborder.bypass` (ignores collision/knockback).
 
