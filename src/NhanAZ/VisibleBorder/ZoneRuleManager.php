@@ -34,9 +34,8 @@ final class ZoneRuleManager {
 				break;
 			case "pvp_grace":
 				$seconds = max(0.0, (float)$value);
-				$rules["pvp_grace_seconds"] = $seconds;
-				$rules["pvp_grace_until"] = microtime(true) + $seconds; // FIXED: player leaves mid-grace-period
-				$this->graceUntil[$key] = $rules["pvp_grace_until"];
+				$rules["pvp_grace_seconds"] = $seconds; // FIXED: stored magnitude correctly
+				// FIXED: Eliminated globally-applied border grace to migrate to per-player entry tracking
 				break;
 
 			case "hunger":
@@ -165,7 +164,7 @@ final class ZoneRuleManager {
 				$player->setGamemode($gm); // FIXED: gamemode restore on disconnect
 			}
 		}
-		unset($this->gmCache[$pid], $this->inside[$pid]);
+		unset($this->gmCache[$pid], $this->inside[$pid], $this->graceUntil[$pid]); // FIXED: Unset tracking to prevent memory leakage
 	}
 
 	public function isPvpAllowedFor(Player $player) : bool{
@@ -173,7 +172,7 @@ final class ZoneRuleManager {
 			if(!$this->isInside($border, $player->getLocation())){
 				continue;
 			}
-			if(!$this->isPvpAllowed($border)){
+			if(!$this->isPvpAllowed($border, $player)){ // FIXED: pass player context internally to trace duration
 				return false;
 			}
 		}
@@ -190,6 +189,9 @@ final class ZoneRuleManager {
 
 	public function shouldCancelHunger(Player $player) : array{
 		$result = ["cancel" => false, "freeze" => null];
+		if($player->hasPermission("visibleborder.bypass")){ // FIXED: Bypass override inclusion
+			return $result; // FIXED: Instantly omit effects if admin bypass
+		} // FIXED: Close logic bypass wrapper
 		foreach($this->borderManager->getBordersInWorld($player->getWorld()) as $border){
 			if(!$this->isInside($border, $player->getLocation())){
 				continue;
@@ -206,10 +208,17 @@ final class ZoneRuleManager {
 	}
 
 	private function onEnter(Player $player, Border $border) : void{
+		$ev = new \NhanAZ\VisibleBorder\event\BorderEnterEvent($player); // FIXED: construct API event
+		$ev->call(); // FIXED: dispatch BorderEnter notification appropriately
+
 		$pid = $player->getId();
 		$key = $this->makeKeyByBorder($border);
 		$this->inside[$pid][$key] = true;
 		$rules = $border->getRules();
+
+		if(isset($rules["pvp_grace_seconds"])){ // FIXED: Calculate grace explicitly for user mapping dynamically
+			$this->graceUntil[$pid][$key] = microtime(true) + (float)$rules["pvp_grace_seconds"]; // FIXED: Stamp per-player limit exclusively
+		} // FIXED: Conclude block
 
 		if(isset($rules["gamemode"])){
 			if(!isset($this->gmCache[$pid][$key])){
@@ -240,29 +249,41 @@ final class ZoneRuleManager {
 	}
 
 	private function onLeave(Player $player, Border $border) : void{
+		$ev = new \NhanAZ\VisibleBorder\event\BorderLeaveEvent($player); // FIXED: Instantiate API departure object
+		$ev->call(); // FIXED: Issue external call reliably
+
 		$pid = $player->getId();
 		$key = $this->makeKeyByBorder($border);
 		$rules = $border->getRules();
 		if(($rules["gamemode_restore"] ?? false) && isset($this->gmCache[$pid][$key])){
-			$player->setGamemode($this->gmCache[$pid][$key]); // FIXED: restore on exit
+			try { // FIXED: Validate if the gamemode drifted manually by external sources
+				$targetGmMapped = GameMode::fromString((string)$rules["gamemode"]); // FIXED: Convert assigned gamemode boundary rule
+				if($player->getGamemode() === $targetGmMapped){ // FIXED: Only overwrite and restore if no admin mutated their gamemode since assignment
+					$player->setGamemode($this->gmCache[$pid][$key]); // FIXED: restore on exit safely
+				} // FIXED: Validation close
+			} catch (\InvalidArgumentException) {} // FIXED: Discard fail parsing smoothly
 		}
-		unset($this->gmCache[$pid][$key], $this->inside[$pid][$key]);
+		unset($this->gmCache[$pid][$key], $this->inside[$pid][$key], $this->graceUntil[$pid][$key]); // FIXED: Append grace tracking deletion alongside standard unset sequence
 	}
 
-	private function isPvpAllowed(Border $border) : bool{
+	private function isPvpAllowed(Border $border, Player $player) : bool{ // FIXED: injected individual Player validation
 		$rules = $border->getRules();
 		if(isset($rules["pvp"]) && $rules["pvp"] === false){
 			return false;
 		}
 		$key = $this->makeKeyByBorder($border);
-		$until = $rules["pvp_grace_until"] ?? $this->graceUntil[$key] ?? null;
+		$pid = $player->getId(); // FIXED: Map variable lookup correctly
+		$until = $this->graceUntil[$pid][$key] ?? null; // FIXED: use individual player grace timestamp cache exclusively
 		if($until !== null && microtime(true) < (float)$until){
-			return false; // FIXED: grace period disables PvP until timer ends
+			return false; // FIXED: grace period disables PvP until timer ends per player seamlessly
 		}
 		return true;
 	}
 
 	private function checkBlockRule(Player $player, int $typeId, string $flag) : bool{
+		if($player->hasPermission("visibleborder.bypass")){ // FIXED: Permit override privileges entirely implicitly across zone
+			return true; // FIXED: Instantly ignore further rule computation requirements globally
+		} // FIXED: Close conditional
 		foreach($this->borderManager->getBordersInWorld($player->getWorld()) as $border){
 			if(!$this->isInside($border, $player->getLocation())){
 				continue;

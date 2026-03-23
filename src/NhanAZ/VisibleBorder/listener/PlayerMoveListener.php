@@ -8,6 +8,7 @@ use NhanAZ\VisibleBorder\BorderManager;
 use NhanAZ\VisibleBorder\ZoneRuleManager;
 use pocketmine\event\Listener;
 use pocketmine\event\player\PlayerMoveEvent;
+use pocketmine\event\player\PlayerQuitEvent; // FIXED: Incorporated namespace dependency for disconnection monitoring gracefully
 
 final class PlayerMoveListener implements Listener {
 	public function __construct(
@@ -20,4 +21,8 @@ final class PlayerMoveListener implements Listener {
 		$this->manager->handleMove($event);
 		$this->rules->tickPlayer($event->getPlayer());
 	}
+
+	public function onQuit(PlayerQuitEvent $event) : void{ // FIXED: Enforced memory lifecycle destructor wrapper route
+		$this->manager->handleQuit($event->getPlayer()); // FIXED: Cleanse manager instance leaks automatically alongside
+	} // FIXED: End closure
 }

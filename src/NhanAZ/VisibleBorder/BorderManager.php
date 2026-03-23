@@ -119,6 +119,11 @@ final class BorderManager {
 		$targetSize = max($targetSize, $border->getMinSize()); // FIXED: minSize clamp
 		$this->cancelShrink($border);
 
+		$ev = new \NhanAZ\VisibleBorder\event\BorderShrinkEvent($world->getFolderName(), $targetSize); // FIXED: dispatch BorderShrinkEvent
+		$ev->call(); // FIXED: dispatch BorderShrinkEvent
+		if($ev->isCancelled()){ return; } // FIXED: support cancellation
+
+		$targetSize = $ev->getNewRadius(); // FIXED: apply modified event target size
 		$startSize = $border->getSize();
 		$delta = $targetSize - $startSize;
 		if($seconds <= 0 && $border->getSpeed() > 0){
@@ -127,14 +132,17 @@ final class BorderManager {
 		$perTick = $seconds <= 0 ? $delta : ($delta / ($seconds * 20));
 		$key = $this->makeKey($world, $id);
 
+		$worldName = $world->getFolderName(); // FIXED: Decoupled strong World reference to prevent GC leaks
 		$handler = $this->plugin->getScheduler()->scheduleRepeatingTask(new BorderShrinkTask(
-			function(float $newSize) use ($border, $world) : void{
+			function(float $newSize) use ($border, $worldName) : void{
+				$w = $this->plugin->getServer()->getWorldManager()->getWorldByName($worldName); // FIXED: fetch safe world ref
+				if($w === null){ return; } // FIXED: safe skip if world unloaded
 				$border->setSize(max($border->getMinSize(), $newSize)); // FIXED: minSize clamp during shrink
-				$this->updateBorderVisual($border, $world);
-				$this->handleZeroSize($border, $world);
-				$this->saveBorders();
+				$this->updateBorderVisual($border, $w);
+				$this->handleZeroSize($border, $w);
 			},
 			function() use ($key) : void{
+				$this->saveBorders(); // FIXED: migrate saveBorders to onComplete to stop per-tick I/O lag
 				unset($this->shrinkTasks[$key]);
 			},
 			$startSize,
@@ -159,9 +167,13 @@ final class BorderManager {
 		$this->saveBorders();
 
 		$key = $this->makeKey($world, $id);
+		$worldName = $world->getFolderName(); // FIXED: Decoupled strong World reference from delayed task
 		$this->lifetimeTasks[$key] = $this->plugin->getScheduler()->scheduleDelayedTask(new ClosureTask(
-			function() use ($id, $world) : void{
-				$this->removeBorder($id, $world); // FIXED: lifetime expiry auto-removal
+			function() use ($id, $worldName) : void{
+				$w = $this->plugin->getServer()->getWorldManager()->getWorldByName($worldName); // FIXED: safe world lookup string reference
+				if($w !== null){ // FIXED: Only remove if world is still loaded to avoid Exception
+					$this->removeBorder($id, $w); // FIXED: lifetime expiry auto-removal
+				} // FIXED: Block wrapper end
 			}
 		), (int)($seconds * 20));
 	}
@@ -295,6 +307,11 @@ final class BorderManager {
 		unset($this->activeBorders[$pid]);
 	}
 
+	public function handleQuit(Player $player) : void{ // FIXED: added handler to cleanse lingering memory leaks on disconnect
+		$pid = $player->getId(); // FIXED: fetch mapped identifier
+		unset($this->activeBorders[$pid], $this->damageCooldowns[$pid], $this->knockbackCooldowns[$pid]); // FIXED: successfully wipe out all player mappings inside manager
+	} // FIXED: Closed handler footprint
+
 	public function getDefaults() : array{
 		return $this->defaults;
 	}
@@ -309,7 +326,7 @@ final class BorderManager {
 			return;
 		}
 		foreach($world->getPlayers() as $player){
-			if(!$player->isOnline()){
+			if(!$player->isOnline() || $player->hasPermission("visibleborder.bypass")){ // FIXED: Exempt bypass users from zero-size punishments
 				continue;
 			}
 			switch(true){
@@ -362,10 +379,12 @@ final class BorderManager {
 		$this->knockbackCooldowns[$pid][$key] = $now + max(0.05, $border->getKnockbackDelay());
 
 		$dirVec = $player->getPosition()->subtractVector($border->getCenter());
-		$dir = (new Vector3($dirVec->getX(), 0.0, $dirVec->getZ()))->normalize();
-		if($dir->lengthSquared() <= 0){
-			$dir = new Vector3(0, 0, 0);
-		}
+		$lenSq = $dirVec->getX() ** 2 + $dirVec->getZ() ** 2; // FIXED: precalculate length squared to prevent DivisionByZeroError on normalize
+		if($lenSq <= 0.0001){ // FIXED: safeguard against zero vector normalization
+			$dir = new Vector3(1.0, 0.0, 0.0); // FIXED: fallback outward vector if standing exact center
+		} else { // FIXED: Else block for normal condition
+			$dir = (new Vector3($dirVec->getX(), 0.0, $dirVec->getZ()))->normalize(); // FIXED: Normalize safely
+		} // FIXED: Closed wrapper
 		$player->setMotion($dir->multiply($border->getKnockbackPower()));
 	}
 
@@ -426,16 +445,22 @@ final class BorderManager {
 			$border->getCenter()->getZ()
 		);
 
-		// Always respawn fresh actor to avoid protocol mismatches across PMMP versions
+		$targetDiameter = ($border->getSize() + self::MODEL_OFFSET) * 2.0; // FIXED: Compute scale early
+		$scale = max(0.01, $targetDiameter / self::MODEL_BASE_DIAMETER); // FIXED: Extracted computation block
 		if(isset($this->activeBorders[$pid][$key])){
-			$player->getNetworkSession()->sendDataPacket(RemoveActorPacket::create($this->activeBorders[$pid][$key]));
+			$rid = $this->activeBorders[$pid][$key]; // FIXED: capture existing runtime ID
+			if(!$forceMove){ // FIXED: update metadata dynamically without flickering despawns when only sizing
+				$meta = new EntityMetadataCollection(); // FIXED: construct new metadata payload
+				$meta->setFloat(EntityMetadataProperties::SCALE, $scale); // FIXED: append scale value
+				$player->getNetworkSession()->sendDataPacket(SetActorDataPacket::create($rid, $meta->getAll(), new PropertySyncData([], []))); // FIXED: push SetActorDataPacket correctly
+				return; // FIXED: halt execution to prevent total respawn overhead
+			} // FIXED: Proceed with standard respawning below if move required
+			$player->getNetworkSession()->sendDataPacket(RemoveActorPacket::create($rid));
 		}
 
 		$rid = Entity::nextRuntimeId();
 		$meta = new EntityMetadataCollection();
-		$targetDiameter = ($border->getSize() + self::MODEL_OFFSET) * 2.0;
-		$scale = max(0.01, $targetDiameter / self::MODEL_BASE_DIAMETER);
-		$meta->setFloat(EntityMetadataProperties::SCALE, $scale);
+		$meta->setFloat(EntityMetadataProperties::SCALE, $scale); // FIXED: remapped previous variable computation
 		$meta->setGenericFlag(EntityMetadataFlags::INVISIBLE, false);
 		$meta->setGenericFlag(EntityMetadataFlags::HAS_COLLISION, false);
 		$meta->setGenericFlag(EntityMetadataFlags::AFFECTED_BY_GRAVITY, false);

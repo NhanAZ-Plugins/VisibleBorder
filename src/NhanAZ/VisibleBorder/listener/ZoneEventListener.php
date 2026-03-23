@@ -27,6 +27,7 @@ final class ZoneEventListener implements Listener {
 		if(!$victim instanceof Player || !$damager instanceof Player){
 			return;
 		}
+		if($damager->hasPermission("visibleborder.bypass") || $victim->hasPermission("visibleborder.bypass")){ return; } // FIXED: Enforced universal boundary disregard for designated moderation/bypass credentials
 		if(!$this->rules->isPvpAllowedFor($victim)){
 			$event->cancel();
 			$msg = $this->messages->get("pvp-disabled", "PvP is disabled in this zone.");
