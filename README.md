@@ -21,11 +21,13 @@ A PocketMine-MP 5 plugin that shows **client-side world borders** with configura
 ## Commands
 All commands start with `/vb` and require `visibleborder.command`.
 
-- `/vb create <id>` - create a border in the current world (default size = `min_size` from config).
-- `/vb remove <id>` - delete one border.
-- `/vb clear` - delete all borders in the current world.
-- `/vb list` - list borders in the current world.
-- `/vb info <id>` - show full settings.
+- **Quick help in-game:** `/vb` will print the full command cheat-sheet (from `messages.yml -> help`).
+
+- `/vb create <id>` — create a border in the current world (default size = `min_size` from config).
+- `/vb remove <id>` — delete one border.
+- `/vb clear` — delete all borders in the current world.
+- `/vb list` — list borders in the current world.
+- `/vb info <id>` — show full settings.
 
 Setters:
 - `/vb set <id> size <value>`
@@ -167,4 +169,3 @@ Available API methods:
 
 ## Uninstall / Reset
 - Remove the plugin and delete `plugin_data/VisibleBorder/` to clear saved borders and generated packs.
-

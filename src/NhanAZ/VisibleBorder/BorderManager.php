@@ -449,7 +449,9 @@ final class BorderManager {
 			$player->getNetworkSession()->sendDataPacket($pk);
 			$this->activeBorders[$pid][$key] = $rid;
 		}else{
-			$player->getNetworkSession()->sendDataPacket(SetActorDataPacket::create($rid, $meta->getAll(), 0));
+			$player->getNetworkSession()->sendDataPacket(
+				SetActorDataPacket::create($rid, $meta->getAll(), new PropertySyncData([], []), 0)
+			);
 			if($forceMove){
 				$flags = MoveActorAbsolutePacket::FLAG_GROUND | MoveActorAbsolutePacket::FLAG_TELEPORT;
 				$player->getNetworkSession()->sendDataPacket(MoveActorAbsolutePacket::create($rid, $center, 0.0, 0.0, $flags));

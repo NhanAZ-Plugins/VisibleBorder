@@ -283,6 +283,13 @@ final class VBCommand extends Command {
 	}
 
 	private function usage(Player $sender) : bool{
+		$help = $this->messages->get("help", null);
+		if(is_array($help)){
+			foreach($help as $line){
+				$sender->sendMessage(TextFormat::YELLOW . (string)$line);
+			}
+			return true;
+		}
 		$sender->sendMessage(TextFormat::YELLOW . $this->messages->get("usage", "/vb create/remove/set/info/list/clear"));
 		return true;
 	}
