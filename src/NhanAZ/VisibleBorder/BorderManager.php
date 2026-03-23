@@ -7,6 +7,8 @@ namespace NhanAZ\VisibleBorder;
 use NhanAZ\VisibleBorder\entity\WorldBorderEntity;
 use NhanAZ\VisibleBorder\model\Border;
 use pocketmine\entity\Entity;
+use pocketmine\entity\effect\VanillaEffects;
+use pocketmine\entity\effect\EffectInstance;
 use pocketmine\entity\Location;
 use pocketmine\event\player\PlayerMoveEvent;
 use pocketmine\network\mcpe\protocol\AddActorPacket;
@@ -26,8 +28,7 @@ final class BorderManager {
 	private const STORAGE_FILE = "borders.yml";
 	private const MODEL_BASE_DIAMETER = 3.4;
 	private const MODEL_OFFSET = 1.0;
-	private const KNOCKBACK_POWER = 0.8;
-	private const KNOCKBACK_DISTANCE = 0.5;
+	private const TELEPORT_DISTANCE = 0.5;
 
 	/** @var array<string,array<string,Border>> worldName => id => Border */
 	private array $borders = [];
@@ -89,14 +90,16 @@ final class BorderManager {
 		$border = $this->requireBorder($id, $world);
 		$border->setSize(max(0.1, $size));
 		$this->saveBorders();
-		$this->updateBorderVisual($border, $world, true);
+		$this->despawnBorderForWorld($world, $border);
+		$this->spawnBorderForWorld($world, $border);
 	}
 
 	public function setBorderCenter(string $id, World $world, Vector3 $center) : void{
 		$border = $this->requireBorder($id, $world);
 		$border->setCenter($this->snapCenter($center));
 		$this->saveBorders();
-		$this->updateBorderVisual($border, $world, true);
+		$this->despawnBorderForWorld($world, $border);
+		$this->spawnBorderForWorld($world, $border);
 	}
 
 	public function setBorderSolid(string $id, World $world, bool $solid) : void{
@@ -119,6 +122,7 @@ final class BorderManager {
 		if($to === null){
 			return;
 		}
+		$speed = $event->getFrom()->distance($to);
 		foreach($this->borders[$player->getWorld()->getFolderName()] ?? [] as $border){
 			$insideTo = $this->isInside($border, $to);
 			$insideFrom = $this->isInside($border, $event->getFrom());
@@ -127,14 +131,11 @@ final class BorderManager {
 				if($insideFrom && !$insideTo){
 					// prevent leaving
 					$event->cancel();
-					$clamped = $this->clampToBorder($border, $to);
-					$event->setTo($clamped);
-					$this->applyKnockback($player, $border, false); // push back in
+					$this->applyBlindAndTeleportCenter($player, $border);
 				}elseif(!$insideFrom && $insideTo){
 					// prevent entering
 					$event->cancel();
-					$event->setTo($event->getFrom());
-					$this->applyKnockback($player, $border, true); // push out
+					$this->applyBlindAndTeleportCenter($player, $border);
 				}
 			}
 		}
@@ -148,8 +149,7 @@ final class BorderManager {
 		foreach($this->borders[$player->getWorld()->getFolderName()] ?? [] as $border){
 			$inside = $this->isInside($border, $pos);
 			if($border->isSolid() && !$inside){
-				$player->teleport($this->clampToBorder($border, $pos));
-				$this->applyKnockback($player, $border, true);
+				$this->applyBlindAndTeleportCenter($player, $border);
 			}
 		}
 	}
@@ -160,16 +160,14 @@ final class BorderManager {
 		}
 	}
 
-	private function applyKnockback(Player $player, Border $border, bool $pushOut) : void{
-		$dirVec = $player->getPosition()->subtractVector($border->getCenter());
-		if(!$pushOut){
-			$dirVec = $dirVec->multiply(-1); // push inward when leaving
-		}
-		$dir = (new Vector3($dirVec->getX(), 0.0, $dirVec->getZ()))->normalize();
-		if($dir->lengthSquared() <= 0){
-			return;
-		}
-		$player->setMotion($dir->multiply(self::KNOCKBACK_POWER));
+	private function applyBlindAndTeleportCenter(Player $player, Border $border) : void{
+		$center = $border->getCenter();
+		// Apply brief blindness without particles to signal block
+		$blind = new EffectInstance(VanillaEffects::BLINDNESS(), 20, 0, false, false); // 1s, no particles
+		$player->getEffects()->add($blind);
+		// Teleport to center with small Y offset preserved
+		$target = new Vector3($center->getX(), $player->getPosition()->getY(), $center->getZ());
+		$player->teleport($target);
 	}
 
 	private function clampToBorder(Border $border, Vector3 $pos) : Location{
