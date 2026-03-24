@@ -8,8 +8,11 @@ use pocketmine\plugin\PluginBase;
 use pocketmine\resourcepacks\ZippedResourcePack;
 use Symfony\Component\Filesystem\Path;
 use ZipArchive;
+use function array_unshift;
 use function count;
 use function file_get_contents;
+use function rtrim;
+use function str_replace;
 use function str_starts_with;
 use function strlen;
 use function substr;
@@ -24,7 +27,7 @@ final class ResourcePackUtil {
 	 * then logs each entry so you can verify the ZIP structure in the console.
 	 */
 	public static function compileAndSave(PluginBase $plugin) : string {
-		$zipPath = Path::join($plugin->getDataFolder(), $plugin->getName() . '.mcpack');
+		$zipPath = rtrim($plugin->getDataFolder(), "/\\") . DIRECTORY_SEPARATOR . $plugin->getName() . '.mcpack';
 		@unlink($zipPath);
 
 		$zip = new ZipArchive();
@@ -56,11 +59,12 @@ final class ResourcePackUtil {
 
 		$zip->close();
 
-		// Log every entry so we can verify the ZIP structure in the console
+		$prettyPath = str_replace('\\', '/', $zipPath);
 		$plugin->getLogger()->info("[ResourcePackUtil] ZIP entries (" . count($entries) . "):");
 		foreach($entries as $entry){
 			$plugin->getLogger()->info("[ResourcePackUtil]   → $entry");
 		}
+		$plugin->getLogger()->info("[ResourcePackUtil] Pack built \u{2192} " . $prettyPath);
 
 		return $zipPath;
 	}
@@ -69,7 +73,7 @@ final class ResourcePackUtil {
 	 * Registers the compiled pack with PMMP's ResourcePackManager (public API, no reflection).
 	 */
 	public static function register(PluginBase $plugin) : void {
-		$zipPath = Path::join($plugin->getDataFolder(), $plugin->getName() . '.mcpack');
+		$zipPath = rtrim($plugin->getDataFolder(), "/\\") . DIRECTORY_SEPARATOR . $plugin->getName() . '.mcpack';
 
 		try {
 			$pack = new ZippedResourcePack($zipPath);
@@ -97,7 +101,7 @@ final class ResourcePackUtil {
 	public static function unregister(PluginBase $plugin) : void {
 		$manager = $plugin->getServer()->getResourcePackManager();
 		$stack = $manager->getResourceStack();
-		$zipPath = Path::join($plugin->getDataFolder(), $plugin->getName() . '.mcpack');
+		$zipPath = rtrim($plugin->getDataFolder(), "/\\") . DIRECTORY_SEPARATOR . $plugin->getName() . '.mcpack';
 
 		foreach($stack as $key => $pack){
 			if($pack instanceof ZippedResourcePack && $pack->getPath() === $zipPath){
