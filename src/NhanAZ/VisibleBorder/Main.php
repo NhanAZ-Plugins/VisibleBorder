@@ -10,7 +10,7 @@ use NhanAZ\VisibleBorder\entity\WorldBorderEntity;
 use NhanAZ\VisibleBorder\listener\PlayerMoveListener;
 use NhanAZ\VisibleBorder\task\BorderSyncTask;
 use NhanAZ\VisibleBorder\util\ActorIdentifierRegistrar;
-use NhanAZ\VisibleBorder\util\ResourcePackUtil;
+use NhanAZ\libRegRsp\libRegRsp;
 use pocketmine\event\Listener;
 use pocketmine\event\player\PlayerJoinEvent;
 use pocketmine\plugin\PluginBase;
@@ -27,8 +27,7 @@ final class Main extends PluginBase implements Listener {
 
 		ActorIdentifierRegistrar::register(WorldBorderEntity::class, WorldBorderEntity::IDENTIFIER);
 
-		ResourcePackUtil::compileAndSave($this);
-		ResourcePackUtil::register($this);
+        libRegRsp::compileAndRegister($this, 'VisibleBorder Pack');
 
 		$this->borderManager = new BorderManager($this);
 		VisibleBorderAPI::init($this->borderManager);
@@ -44,7 +43,7 @@ final class Main extends PluginBase implements Listener {
 	}
 
 	protected function onDisable() : void{
-		ResourcePackUtil::unregister($this);
+		libRegRsp::unregister($this);
 	}
 
 	public function onJoin(PlayerJoinEvent $event) : void{
