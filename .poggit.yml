@@ -1,0 +1,8 @@
+--- # Poggit-CI Manifest. Open the CI at https://poggit.pmmp.io/ci/NhanAZ-Plugins/VisibleBorder
+build-by-default: true
+branches:
+- main
+projects:
+  VisibleBorder:
+    path: ""
+...
