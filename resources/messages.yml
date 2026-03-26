@@ -1,6 +1,7 @@
 usage: "/vb create/remove/set/info/list/clear"
 ingame-only: "This command can only be used in-game."
 help:
+  - "§eVisibleBorder commands:"
   - "§b/vb create <id> §7- create a border"
   - "§b/vb remove <id> §7- delete one border"
   - "§b/vb clear §7- delete all borders in this world"

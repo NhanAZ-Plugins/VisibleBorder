@@ -7,10 +7,8 @@ namespace NhanAZ\VisibleBorder;
 use NhanAZ\VisibleBorder\entity\WorldBorderEntity;
 use NhanAZ\VisibleBorder\model\Border;
 use pocketmine\entity\Entity;
-use pocketmine\entity\Location;
 use pocketmine\event\player\PlayerMoveEvent;
 use pocketmine\network\mcpe\protocol\AddActorPacket;
-use pocketmine\network\mcpe\protocol\MoveActorAbsolutePacket;
 use pocketmine\network\mcpe\protocol\RemoveActorPacket;
 use pocketmine\network\mcpe\protocol\types\entity\EntityMetadataCollection;
 use pocketmine\network\mcpe\protocol\types\entity\EntityMetadataFlags;
@@ -26,7 +24,6 @@ final class BorderManager {
 	private const STORAGE_FILE = "borders.yml";
 	private const MODEL_BASE_DIAMETER = 3.4;
 	private const MODEL_OFFSET = 1.0;
-	private const TELEPORT_DISTANCE = 0.5;
 
 	/** @var array<string,array<string,Border>> worldName => id => Border */
 	private array $borders = [];
@@ -35,7 +32,7 @@ final class BorderManager {
 
 	private Config $storage;
 
-	public function __construct(private Main $plugin){
+	public function __construct(Main $plugin){
 		$this->storage = new Config($plugin->getDataFolder() . self::STORAGE_FILE, Config::YAML);
 		$this->loadBorders();
 	}
@@ -117,10 +114,6 @@ final class BorderManager {
 			return;
 		}
 		$to = $event->getTo();
-		if($to === null){
-			return;
-		}
-		$speed = $event->getFrom()->distance($to);
 		foreach($this->borders[$player->getWorld()->getFolderName()] ?? [] as $border){
 			$insideTo = $this->isInside($border, $to);
 			$insideFrom = $this->isInside($border, $event->getFrom());
@@ -160,17 +153,6 @@ final class BorderManager {
 
 	private function applyBlindAndTeleportCenter(Player $player, Border $border) : void{
 		$player->kill(); // instantly kill on breach for simplicity
-	}
-
-	private function clampToBorder(Border $border, Vector3 $pos) : Location{
-		$center = $border->getCenter();
-		$direction = $pos->subtractVector($center);
-		if($direction->lengthSquared() <= 0){
-			return Location::fromObject($center, $pos->getWorld(), 0.0, 0.0);
-		}
-		$direction = $direction->normalize()->multiply(max(0.0, $border->getSize() - self::KNOCKBACK_DISTANCE));
-		$target = $direction->addVector($center);
-		return Location::fromObject(new Vector3($target->getX(), $pos->getY(), $target->getZ()), $pos->getWorld(), 0.0, 0.0);
 	}
 
 	private function isInside(Border $border, Vector3 $pos) : bool{

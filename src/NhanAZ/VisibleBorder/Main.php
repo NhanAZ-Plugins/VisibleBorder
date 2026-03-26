@@ -21,13 +21,19 @@ final class Main extends PluginBase implements Listener {
 	private Config $messages;
 
 	protected function onEnable() : void{
+		if(!class_exists(libRegRsp::class)){
+			$this->getLogger()->error("Missing dependency libRegRsp. Install via Poggit virion (libs: NhanAZ/libRegRsp ^1.0.4) or composer require nhanaz/libregrsp. Poggit build: https://poggit.pmmp.io/ci/NhanAZ-Libraries/libRegRsp/libRegRsp");
+			$this->getServer()->getPluginManager()->disablePlugin($this);
+			return;
+		}
+
 		$this->saveDefaultConfig();
 		$this->saveResource("messages.yml");
 		$this->messages = new Config($this->getDataFolder() . "messages.yml", Config::YAML);
 
 		ActorIdentifierRegistrar::register(WorldBorderEntity::class, WorldBorderEntity::IDENTIFIER);
 
-        libRegRsp::compileAndRegister($this, 'VisibleBorder Pack');
+		libRegRsp::compileAndRegister($this, 'VisibleBorder Pack');
 
 		$this->borderManager = new BorderManager($this);
 		VisibleBorderAPI::init($this->borderManager);

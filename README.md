@@ -1,6 +1,6 @@
 # VisibleBorder
 
-Visible world border with configurable size, center, and optional kill-on-cross.
+Lightweight visible world border for PocketMine-MP 5: set size/center, make it solid (instant death on crossing), and keep it in sync for all players. Primary purpose: code reference for how The Hive-style visible borders work; core gameplay features are intentionally minimal (solid = kill, basic API/commands).
 
 <img width="2340" height="1080" alt="Screenshot_20260326_171130_Minecraft" src="https://github.com/user-attachments/assets/b6014adc-f7f2-4f7e-82ec-c983e8652187" />
 
@@ -13,10 +13,13 @@ Visible world border with configurable size, center, and optional kill-on-cross.
    ```
    /vb create test
    /vb set test size 10
-   /vb set test center     # uses your position
-   /vb set test solid true # block in/out
+   /vb set test center     # uses your position (snaps to .5/.5)
+   /vb set test solid true # solid wall = instant death on crossing
    ```
 4) Borders persist in `plugin_data/VisibleBorder/borders.yml`.
+
+> The resource pack is compiled and registered automatically by the libRegRsp virion (declared in `.poggit.yml`). Nothing extra is bundled in this repo.
+> Ready-to-use builds: [Poggit CI download](https://poggit.pmmp.io/ci/NhanAZ-Plugins/VisibleBorder/VisibleBorder).
 
 ---
 
@@ -31,15 +34,15 @@ All require `visibleborder.command`. In-game help: `/vb`.
 - `/vb set <id> size <value>` - set radius (blocks).
 - `/vb set <id> center` - center at your position (snaps to .5/.5).
 - `/vb set <id> center <x> <z>` - set center coords.
-- `/vb set <id> solid <true/false>` – toggle collision blocking (if true: crossing = instant death).
+- `/vb set <id> solid <true/false>` - toggle collision blocking (true = instant death on crossing).
 
-Bypass permission: `visibleborder.bypass` (ignores collision/knockback).
+Bypass permission: `visibleborder.bypass` (ignores collision enforcement).
 
 ---
 
 ## Behaviour
 - Solid=true: players cannot exit or enter; attempts result in instant death.
-- Solid=false: border is visual only (no enforcement).
+- Solid=false: border is visual only.
 - Sync task pulls stationary players back into compliance each tick.
 
 ---
@@ -49,7 +52,6 @@ Bypass permission: `visibleborder.bypass` (ignores collision/knockback).
 ```yaml
 sync-interval-ticks: 40
 ```
-Sync task also enforces collision/knockback for stationary players.
 
 ---
 
@@ -83,5 +85,4 @@ Methods:
 
 ## Troubleshooting
 - Border invisible: relog to reload the resource pack; ensure plugin registered (see console).
-- Knockback not working: ensure `solid` is true and you don’t have `visibleborder.bypass`.
 - Pack cache issues: delete `plugin_data/VisibleBorder/VisibleBorder.mcpack` and restart.

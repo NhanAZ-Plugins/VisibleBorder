@@ -13,7 +13,6 @@ class WorldBorderEntity extends Entity {
 
 	protected function initEntity(CompoundTag $nbt) : void{
 		parent::initEntity($nbt);
-		$this->setImmobile(true);
 		$this->setHasGravity(false);
 	}
 
