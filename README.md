@@ -1,4 +1,4 @@
-# VisibleBorder (PM5)
+# VisibleBorder
 
 Visible world border with configurable size, center, and optional kill-on-cross.
 
