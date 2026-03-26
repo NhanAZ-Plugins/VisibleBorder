@@ -1,6 +1,8 @@
-# VisibleBorder (PM5)
+# VisibleBorder
 
 Visible world border with configurable size, center, and optional kill-on-cross.
+
+<img width="2340" height="1080" alt="Screenshot_20260326_171130_Minecraft" src="https://github.com/user-attachments/assets/b6014adc-f7f2-4f7e-82ec-c983e8652187" />
 
 ---
 
