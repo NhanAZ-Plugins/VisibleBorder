@@ -3,14 +3,14 @@ name: VisibleBorder
 main: NhanAZ\VisibleBorder\Main
 version: 1.0.0
 api: 5.0.0
-description: Show a visible world border using a custom resource pack and client-only entity.
+description: Visible world border with configurable size, center, and optional kill-on-cross.
+author: NhanAZ
+website: https://github.com/NhanAZ
 permissions:
   visibleborder.command:
     default: op
-    description: Allow using /vb management commands
+    description: Allow using /vb commands
   visibleborder.bypass:
     default: op
-    description: Bypass border collision/damage
-provides:
-  - visibleborderapi
+    description: Bypass border restrictions
 ...
