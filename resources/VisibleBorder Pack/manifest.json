@@ -3,11 +3,11 @@
     "header": {
         "description": "Visible Border Pack",
         "name": "VisibleBorder",
-        "uuid": "1acb6000-fad7-4c6f-9bc2-34a0d054421b",
+        "uuid": "9fff4e0a-d682-42f0-a5e3-93a2b16b7c9b",
         "version": [
             1,
             0,
-            1
+            0
         ],
         "min_engine_version": [
             1,
@@ -19,12 +19,18 @@
         {
             "description": "Visible Border resources",
             "type": "resources",
-            "uuid": "7e5a8e8f-6b9d-4ec9-9f80-5f1c0f4d8f8c",
+            "uuid": "94ca73fc-5147-4561-852c-fdac088f76e5",
             "version": [
                 1,
                 0,
-                1
+                0
             ]
         }
-    ]
+    ],
+    "metadata": {
+        "authors": [
+            "NhanAZ"
+        ],
+        "url": "https://github.com/NhanAZ"
+    }
 }

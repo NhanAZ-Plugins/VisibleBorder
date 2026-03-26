@@ -5,6 +5,7 @@ version: 1.0.0
 api: 5.0.0
 description: Visible world border with configurable size, center, and optional kill-on-cross.
 author: NhanAZ
+website: https://github.com/NhanAZ
 permissions:
   visibleborder.command:
     default: op
