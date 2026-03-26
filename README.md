@@ -83,6 +83,23 @@ Methods:
 
 ---
 
+## Why an Entity (not particles/blocks)
+- Comparison (Hive-style is Entity):
+  | Aspect                     | Entity                                  | Particles                                      | Blocks / Custom Block                      |
+  |----------------------------|-----------------------------------------------------|------------------------------------------------|--------------------------------------------|
+  | Visual reliability         | Stays in render graph; not culled                   | Culling/FPS caps drop particles                | Always visible but heavy chunk traffic     |
+  | Scaling / animation        | Metadata SCALE per-player, no world edit            | Requires constant re-spawn                     | Requires mass block updates                |
+  | World integrity            | No chunk changes                                    | No chunk changes                               | Edits world (rollback/grief risk)          |
+  | Per-player control         | Yes (per session, per packet)                       | Limited; global broadcast                      | Global; hard to personalize                |
+  | Bandwidth                  | Low (one actor, occasional metadata)                | High (continuous particle spam)                | High (block change packets)                |
+  | Client smoothness          | Uses built-in interpolation                         | Trails/lag when camera moves fast              | Dependent on chunk mesh rebuilds           |
+  | Pack complexity            | One model/texture                                   | Many particle defs for variety                 | Block models/textures/states               |
+  | Collision handling         | Separate server logic; visuals independent          | Separate; visuals often desync                 | Tied to block collision grid               |
+
+This mirrors how The Hive presents its visible border: an always-synced custom entity plus server-side enforcement.
+
+---
+
 ## Troubleshooting
 - Border invisible: relog to reload the resource pack; ensure plugin registered (see console).
 - Pack cache issues: delete `plugin_data/VisibleBorder/VisibleBorder.mcpack` and restart.
