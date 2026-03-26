@@ -6,6 +6,6 @@ projects:
   VisibleBorder:
     path: ""
     libs:
-      - src: NhanAZ/libRegRsp/libRegRsp
+      - src: NhanAZ-Libraries/libRegRsp/libRegRsp
         version: ^1.0.4
 ...

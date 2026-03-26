@@ -18,7 +18,7 @@ Lightweight visible world border for PocketMine-MP 5: set size/center, make it s
    ```
 4) Borders persist in `plugin_data/VisibleBorder/borders.yml`.
 
-> The resource pack is compiled and registered automatically by the libRegRsp virion (declared in `.poggit.yml`). Nothing extra is bundled in this repo.
+> The resource pack is compiled and registered automatically by the libRegRsp virion (declared in `.poggit.yml`, repo: NhanAZ-Libraries/libRegRsp/libRegRsp). Nothing extra is bundled in this repo.
 > Ready-to-use builds: [Poggit CI download](https://poggit.pmmp.io/ci/NhanAZ-Plugins/VisibleBorder/VisibleBorder).
 
 ---
