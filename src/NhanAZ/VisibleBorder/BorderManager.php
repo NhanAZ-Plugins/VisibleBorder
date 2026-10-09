@@ -231,8 +231,20 @@ final class BorderManager {
 	private function loadBorders() : void{
 		$data = $this->storage->getAll();
 		foreach($data as $worldName => $borders){
+			if(!is_string($worldName) || !is_array($borders)){
+				continue;
+			}
 			foreach($borders as $id => $entry){
-				$this->borders[$worldName][$id] = Border::fromArray((string)$id, (string)$worldName, (array)$entry);
+				if(!is_string($id) || !is_array($entry)){
+					continue;
+				}
+				$fields = [];
+				foreach($entry as $field => $value){
+					if(is_string($field)){
+						$fields[$field] = $value;
+					}
+				}
+				$this->borders[$worldName][$id] = Border::fromArray($id, $worldName, $fields);
 			}
 		}
 	}

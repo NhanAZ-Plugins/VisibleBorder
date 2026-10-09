@@ -1,0 +1,82 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out VisibleBorder
+        uses: actions/checkout@v7.0.1
+
+      - name: Check out pinned libRegRsp
+        uses: actions/checkout@v7.0.1
+        with:
+          repository: NhanAZ-Libraries/libRegRsp
+          ref: 04766ae683a1ba63ed297730f7f2e8628aac3666
+          path: virions/libRegRsp
+          persist-credentials: false
+
+      - name: Check out Axolotl-PM source for PHPStan
+        uses: actions/checkout@v7.0.1
+        with:
+          repository: axolotl-pm/PocketMine-MP
+          ref: dfe0d07e48a9e8d5a4a242fa43ff1cd3b743a955
+          path: .devtools-dependencies/axolotl-pm
+          persist-credentials: false
+
+      - name: Check out Axolotl-PM PHP setup helper
+        uses: actions/checkout@v7.0.1
+        with:
+          repository: axolotl-pm/setup-php-action
+          ref: b8c3f9add4f2ad4a5e2624a1112aba899ee8db0e
+          path: .devtools-dependencies/setup-php-action
+          persist-credentials: false
+
+      - name: Set up Axolotl-PM PHP on Node.js 24
+        shell: bash
+        env:
+          INPUT_PHP-VERSION: "8.1"
+          INPUT_PM-VERSION-MAJOR: "5"
+          INPUT_INSTALL-PATH: ./.php-bin
+        run: node "$GITHUB_WORKSPACE/.devtools-dependencies/setup-php-action/dist/index.js"
+
+      - name: Lint PHP source and verifier
+        run: find src tools -name '*.php' -print0 | xargs -0 -n1 php -l
+
+      - name: Build PHAR and analyze at PHPStan level max
+        id: build
+        uses: NhanAZ/DevTools@v1.0.1
+        with:
+          project: .
+          virions: virions
+          output: build
+          phpstan: max
+          phpstan-server: .devtools-dependencies/axolotl-pm
+
+      - name: Verify PHAR and dependency licenses
+        env:
+          PHAR_PATH: ${{ steps.build.outputs.phar }}
+          BUILD_METADATA: ${{ steps.build.outputs.metadata }}
+        run: |
+          php tools/verify-build.php "$PHAR_PATH" "$BUILD_METADATA" virions/libRegRsp
+          cp "$BUILD_METADATA" build/devtools-build.json
+
+      - name: Upload PHAR from this commit
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: ${{ steps.build.outputs.plugin-name }}-${{ github.sha }}
+          path: |
+            ${{ steps.build.outputs.phar }}
+            build/devtools-build.json
+          if-no-files-found: error
+          retention-days: 14

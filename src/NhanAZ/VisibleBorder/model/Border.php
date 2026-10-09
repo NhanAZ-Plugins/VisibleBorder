@@ -47,6 +47,7 @@ final class Border {
 		$this->solid = $solid;
 	}
 
+	/** @return array{size: float, center: array{x: float, y: float, z: float}, solid: bool} */
 	public function toArray() : array{
 		return [
 			"size" => $this->size,
@@ -59,17 +60,23 @@ final class Border {
 		];
 	}
 
+	/** @param array<string, mixed> $data */
 	public static function fromArray(string $id, string $worldName, array $data) : self{
+		$centerData = $data["center"] ?? [];
+		if(!is_array($centerData)){
+			$centerData = [];
+		}
+		$coordinate = static fn(mixed $value, float $default) : float => is_numeric($value) ? (float)$value : $default;
 		$center = new Vector3(
-			(float)($data["center"]["x"] ?? 0.5),
-			(float)($data["center"]["y"] ?? 0.0),
-			(float)($data["center"]["z"] ?? 0.5)
+			$coordinate($centerData["x"] ?? null, 0.5),
+			$coordinate($centerData["y"] ?? null, 0.0),
+			$coordinate($centerData["z"] ?? null, 0.5)
 		);
 
 		return new self(
 			$id,
 			$worldName,
-			(float)($data["size"] ?? 0),
+			$coordinate($data["size"] ?? null, 0.0),
 			$center,
 			(bool)($data["solid"] ?? true)
 		);

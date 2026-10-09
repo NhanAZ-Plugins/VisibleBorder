@@ -22,6 +22,7 @@ final class VBCommand extends Command {
 		$this->setPermission("visibleborder.command");
 	}
 
+	/** @param list<string> $args */
 	public function execute(CommandSender $sender, string $commandLabel, array $args) : bool{
 		if(!$this->testPermission($sender)){
 			return true;
@@ -47,6 +48,7 @@ final class VBCommand extends Command {
 		}
 	}
 
+	/** @param list<string> $args */
 	private function create(Player $sender, array $args) : bool{
 		$id = $args[1] ?? null;
 		if($id === null){
@@ -57,6 +59,7 @@ final class VBCommand extends Command {
 		return true;
 	}
 
+	/** @param list<string> $args */
 	private function remove(Player $sender, array $args) : bool{
 		$id = $args[1] ?? null;
 		if($id === null){
@@ -84,7 +87,7 @@ final class VBCommand extends Command {
 		}
 		$this->msg($sender, "border-list-header", ["{count}" => (string)count($borders)]);
 		foreach($borders as $border){
-			$line = $this->messages->get("border-list-line", "{id}: size {size} center ({x}, {z})");
+			$line = $this->messageTemplate("border-list-line", "{id}: size {size} center ({x}, {z})");
 			$line = strtr($line, [
 				"{id}" => $border->getId(),
 				"{size}" => (string)$border->getSize(),
@@ -96,6 +99,7 @@ final class VBCommand extends Command {
 		return true;
 	}
 
+	/** @param list<string> $args */
 	private function info(Player $sender, array $args) : bool{
 		$id = $args[1] ?? null;
 		if($id === null){
@@ -106,7 +110,7 @@ final class VBCommand extends Command {
 			$this->msg($sender, "border-not-found", ["{id}" => $id]);
 			return true;
 		}
-		$template = $this->messages->get("border-info", "{id}: size {size}, center ({x},{z}), solid {solid}");
+		$template = $this->messageTemplate("border-info", "{id}: size {size}, center ({x},{z}), solid {solid}");
 		$sender->sendMessage(strtr($template, [
 			"{id}" => $border->getId(),
 			"{size}" => (string)$border->getSize(),
@@ -117,6 +121,7 @@ final class VBCommand extends Command {
 		return true;
 	}
 
+	/** @param list<string> $args */
 	private function set(Player $sender, array $args) : bool{
 		$id = $args[1] ?? null;
 		$property = strtolower($args[2] ?? "");
@@ -131,6 +136,7 @@ final class VBCommand extends Command {
 		};
 	}
 
+	/** @param list<string> $args */
 	private function handleSize(Player $sender, string $id, array $args) : bool{
 		$value = (float)($args[3] ?? $args[2] ?? 0);
 		$this->manager->setBorderSize($id, $sender->getWorld(), $value);
@@ -138,6 +144,7 @@ final class VBCommand extends Command {
 		return true;
 	}
 
+	/** @param list<string> $args */
 	private function handleCenter(Player $sender, string $id, array $args) : bool{
 		if(count($args) >= 5){
 			$x = (float)$args[3];
@@ -156,6 +163,7 @@ final class VBCommand extends Command {
 		return true;
 	}
 
+	/** @param list<string> $args */
 	private function handleSolid(Player $sender, string $id, array $args) : bool{
 		$value = strtolower($args[3] ?? "");
 		$solid = $value === "true" || $value === "1" || $value === "yes";
@@ -168,16 +176,24 @@ final class VBCommand extends Command {
 		$help = $this->messages->get("help", null);
 		if(is_array($help)){
 			foreach($help as $line){
-				$sender->sendMessage(TextFormat::YELLOW . (string)$line);
+				if(is_string($line)){
+					$sender->sendMessage(TextFormat::YELLOW . $line);
+				}
 			}
 			return true;
 		}
-		$sender->sendMessage(TextFormat::YELLOW . $this->messages->get("usage", "/vb create/remove/set/info/list/clear"));
+		$sender->sendMessage(TextFormat::YELLOW . $this->messageTemplate("usage", "/vb create/remove/set/info/list/clear"));
 		return true;
 	}
 
+	/** @param array<string, string> $vars */
 	private function msg(CommandSender $sender, string $key, array $vars = []) : void{
-		$text = (string)$this->messages->get($key, $key);
+		$text = $this->messageTemplate($key, $key);
 		$sender->sendMessage(strtr($text, $vars));
+	}
+
+	private function messageTemplate(string $key, string $default) : string{
+		$value = $this->messages->get($key, $default);
+		return is_string($value) ? $value : $default;
 	}
 }

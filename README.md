@@ -1,66 +1,54 @@
 # VisibleBorder
 
-Lightweight visible world border for PocketMine-MP 5: set size/center, make it solid (instant death on crossing), and keep it in sync for all players. Primary purpose: code reference for how The Hive-style visible borders work; core gameplay features are intentionally minimal (solid = kill, basic API/commands).
+VisibleBorder adds a configurable, visible world border to Axolotl-PM worlds. Version 1.0.1 targets Axolotl-PM 5.49.1 and PHP 8.1 or later.
 
-<img width="2340" height="1080" alt="Screenshot_20260326_171130_Minecraft" src="https://github.com/user-attachments/assets/b6014adc-f7f2-4f7e-82ec-c983e8652187" />
+The plugin places a custom entity around each border and bundles a matching Bedrock resource pack. Its optional solid mode kills a player who crosses a border. Border definitions are saved in `plugin_data/VisibleBorder/borders.yml`.
 
----
+![A VisibleBorder example in Minecraft](https://github.com/user-attachments/assets/b6014adc-f7f2-4f7e-82ec-c983e8652187)
 
-## Quick Start
-1) Drop the plugin into `plugins/`.
-2) Start the server once (generates `config.yml` + `messages.yml`).
-3) In-game (requires `visibleborder.command`):
-   ```
-   /vb create test
-   /vb set test size 10
-   /vb set test center     # uses your position (snaps to .5/.5)
-   /vb set test solid true # solid wall = instant death on crossing
-   ```
-4) Borders persist in `plugin_data/VisibleBorder/borders.yml`.
+## Requirements
 
-> The resource pack is compiled and registered automatically by the libRegRsp virion (declared in `.poggit.yml`, repo: NhanAZ-Libraries/libRegRsp/libRegRsp). Nothing extra is bundled in this repo.
-> Ready-to-use builds: [Poggit CI download](https://poggit.pmmp.io/ci/NhanAZ-Plugins/VisibleBorder/VisibleBorder).
+- Axolotl-PM 5.49.1 with plugin API 5.0.0.
+- PHP 8.1 or later with the extensions required by Axolotl-PM, including `zip`.
+- A Bedrock client that accepts the bundled resource pack to see the border.
 
----
+The release PHAR includes [libRegRsp 1.0.5](https://github.com/NhanAZ-Libraries/libRegRsp/releases/tag/v1.0.5). Installing that library separately is unnecessary for the release build.
 
-## Commands
-All require `visibleborder.command`. In-game help: `/vb`.
+## Installation
 
-- `/vb create <id>` - create a border in the current world (default size 5, center = you).
-- `/vb remove <id>` - delete one border.
-- `/vb clear` - delete all borders in this world.
-- `/vb list` - list borders in this world.
-- `/vb info <id>` - show size/center/solid.
-- `/vb set <id> size <value>` - set radius (blocks).
-- `/vb set <id> center` - center at your position (snaps to .5/.5).
-- `/vb set <id> center <x> <z>` - set center coords.
-- `/vb set <id> solid <true/false>` - toggle collision blocking (true = instant death on crossing).
+1. Download the PHAR from a successful [Build workflow](https://github.com/NhanAZ-Plugins/VisibleBorder/actions/workflows/build.yml).
+2. Place `VisibleBorder.phar` in the Axolotl-PM `plugins` directory.
+3. Start the server, join with a Bedrock client and accept the resource pack.
+4. Run `/vb help` in game. The command requires `visibleborder.command`.
 
-Bypass permission: `visibleborder.bypass` (ignores collision enforcement).
+The plugin creates `config.yml`, `messages.yml` and `borders.yml` in its data directory. Existing border data uses the same path and structure as version 1.0.0.
 
----
+## Commands and permissions
 
-## Behaviour
-- Solid=true: players cannot exit or enter; attempts result in instant death.
-- Solid=false: border is visual only.
-- Sync task pulls stationary players back into compliance each tick.
+| Command | Effect |
+|---|---|
+| `/vb create <id>` | Create a border in the current world. |
+| `/vb remove <id>` | Remove one border. |
+| `/vb clear` | Remove all borders in the current world. |
+| `/vb list` | List borders in the current world. |
+| `/vb info <id>` | Show size, center and solid mode. |
+| `/vb set <id> size <value>` | Set the border radius in blocks. |
+| `/vb set <id> center` | Move the center to the player's current position. |
+| `/vb set <id> center <x> <z>` | Set explicit center coordinates. |
+| `/vb set <id> solid <true|false>` | Enable or disable instant death on crossing. |
 
----
+`visibleborder.command` controls command access and defaults to operators. `visibleborder.bypass` exempts a player from crossing enforcement and also defaults to operators. Console senders cannot run the in-game border commands.
 
-## Configuration
-`resources/config.yml`:
-```yaml
-sync-interval-ticks: 40
-```
+## Configuration and behavior
 
----
+`sync-interval-ticks` in `config.yml` defaults to `40`. A non-positive or invalid value falls back to `40`. Restart the server after editing configuration or messages. Set `solid` to `false` for a visual border with no crossing penalty.
 
-## Messages
-`resources/messages.yml` holds all player-facing strings (help, info, feedback).
+The resource pack is generated from `resources/VisibleBorder Pack/` and registered when the plugin starts. It is removed from the server resource stack when the plugin stops. The previous generated pack file is preserved if a new pack cannot be compiled. A resource pack failure disables the plugin so it does not run without its visual asset.
 
----
+## API
 
-## API (VisibleBorderAPI)
+`NhanAZ\VisibleBorder\api\VisibleBorderAPI::get()` exposes border management to other plugins. The plugin must be enabled before this API is used.
+
 ```php
 use NhanAZ\VisibleBorder\api\VisibleBorderAPI;
 use pocketmine\math\Vector3;
@@ -71,35 +59,25 @@ $api->setBorderSize("arena", $world, 20.0);
 $api->setBorderCenter("arena", $world, new Vector3(10, 64, 10));
 $api->setBorderSolid("arena", $world, true);
 ```
-Methods:
-- `createBorder(id, world, size, center): Border`
-- `removeBorder(id, world): bool`
-- `getBorder(id, world): ?Border`
-- `getBordersInWorld(world): Border[]`
-- `setBorderSize(id, world, size)`
-- `setBorderCenter(id, world, Vector3 $center)`
-- `setBorderSolid(id, world, bool $solid)`
-- `isInsideBorder(Player $player, string $id): bool`
 
----
+See [VisibleBorderAPI.php](src/NhanAZ/VisibleBorder/api/VisibleBorderAPI.php) for methods and return types.
 
-## Why an Entity (not particles/blocks)
-- Comparison (Hive-style is Entity):
-  | Aspect                     | Entity                                  | Particles                                      | Blocks / Custom Block                      |
-  |----------------------------|-----------------------------------------------------|------------------------------------------------|--------------------------------------------|
-  | Visual reliability         | Stays in render graph; not culled                   | Culling/FPS caps drop particles                | Always visible but heavy chunk traffic     |
-  | Scaling / animation        | Metadata SCALE per-player, no world edit            | Requires constant re-spawn                     | Requires mass block updates                |
-  | World integrity            | No chunk changes                                    | No chunk changes                               | Edits world (rollback/grief risk)          |
-  | Per-player control         | Yes (per session, per packet)                       | Limited; global broadcast                      | Global; hard to personalize                |
-  | Bandwidth                  | Low (one actor, occasional metadata)                | High (continuous particle spam)                | High (block change packets)                |
-  | Client smoothness          | Uses built-in interpolation                         | Trails/lag when camera moves fast              | Dependent on chunk mesh rebuilds           |
-  | Pack complexity            | One model/texture                                   | Many particle defs for variety                 | Block models/textures/states               |
-  | Collision handling         | Separate server logic; visuals independent          | Separate; visuals often desync                 | Tied to block collision grid               |
+## Building with DevTools
 
-This mirrors how The Hive presents its visible border: an always-synced custom entity plus server-side enforcement.
+This repository declares libRegRsp `^1.0.5` in `devtools.yml`. CI checks out libRegRsp at a pinned commit, analyzes the plugin at PHPStan level max against Axolotl-PM 5.49.1 source, builds a standalone PHAR with [DevTools v1.0.1](https://github.com/NhanAZ/DevTools/releases/tag/v1.0.1), verifies dependency licenses and uploads the result.
 
----
+For a local build, place libRegRsp source at `virions/libRegRsp` and run:
 
-## Troubleshooting
-- Border invisible: relog to reload the resource pack; ensure plugin registered (see console).
-- Pack cache issues: delete `plugin_data/VisibleBorder/VisibleBorder.mcpack` and restart.
+```sh
+php -d phar.readonly=0 path/to/DevTools/bin/devtools.php build --project=. --virions=virions --out=build
+```
+
+A successful build proves packaging. A clean server boot verifies plugin loading and resource pack lifecycle. Actual rendering, entity positioning and crossing behavior still require a Bedrock client test.
+
+## Upgrade and rollback
+
+Version 1.0.1 keeps the existing command names, permissions and border data path. Stop the server before replacing the PHAR. Keep a copy of the previous PHAR and data directory, then install the new build and reconnect players to refresh the pack. Restore the previous PHAR and saved data if an issue appears.
+
+## License and support
+
+VisibleBorder source and its bundled resource pack are distributed under the [MIT License](LICENSE). libRegRsp is separately licensed under LGPL-3.0-or-later, and its license is included in the PHAR. The repository history identifies NhanAZ as the human source contributor. For support, use [NhanAZ Discord](https://discord.gg/j2X83ujT6c) or open a GitHub issue.

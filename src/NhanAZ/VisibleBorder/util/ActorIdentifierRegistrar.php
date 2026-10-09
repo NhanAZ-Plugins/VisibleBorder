@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace NhanAZ\VisibleBorder\util;
 
+use NhanAZ\VisibleBorder\entity\WorldBorderEntity;
 use pocketmine\entity\Entity;
 use pocketmine\entity\EntityDataHelper;
 use pocketmine\entity\EntityFactory;
@@ -22,18 +23,21 @@ final class ActorIdentifierRegistrar {
 	 * @phpstan-param class-string<Entity> $className
 	 */
 	public static function register(string $className, string $identifier) : void{
+		if($className !== WorldBorderEntity::class){
+			throw new \InvalidArgumentException("Only WorldBorderEntity can be registered by VisibleBorder");
+		}
 		// Register with PMMP's factory (spawn/save safety)
 		EntityFactory::getInstance()->register(
 			$className,
-			static function(World $world, CompoundTag $nbt) use ($className) : Entity{
-				return new $className(EntityDataHelper::parseLocation($nbt, $world), $nbt);
+			static function(World $world, CompoundTag $nbt) : Entity{
+				return new WorldBorderEntity(EntityDataHelper::parseLocation($nbt, $world), $nbt);
 			},
 			[$identifier]
 		);
 
 		// Inject into AvailableActorIdentifiers packet cache
 		$cache = StaticPacketCache::getInstance();
-		$ref = new ReflectionClass($cache);
+		$ref = new ReflectionClass(StaticPacketCache::class);
 		$prop = $ref->getProperty("availableActorIdentifiers");
 		/** @var AvailableActorIdentifiersPacket $packet */
 		$packet = $prop->getValue($cache);

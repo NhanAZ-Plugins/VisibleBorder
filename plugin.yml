@@ -1,11 +1,11 @@
 ---
 name: VisibleBorder
 main: NhanAZ\VisibleBorder\Main
-version: 1.0.0
+version: 1.0.1
 api: 5.0.0
-description: Lightweight visible world border with configurable size/center and optional instant-kill blocking.
+description: Visible world borders for Axolotl-PM with configurable size, center and crossing behavior.
 author: NhanAZ
-website: https://github.com/NhanAZ
+website: https://github.com/NhanAZ-Plugins/VisibleBorder
 permissions:
   visibleborder.command:
     default: op

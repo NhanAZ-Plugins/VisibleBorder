@@ -22,7 +22,7 @@ final class Main extends PluginBase implements Listener {
 
 	protected function onEnable() : void{
 		if(!class_exists(libRegRsp::class)){
-			$this->getLogger()->error("Missing dependency libRegRsp. Install via Poggit virion (libs: NhanAZ-Libraries/libRegRsp/libRegRsp ^1.0.4) or composer require nhanaz/libregrsp. Poggit build: https://poggit.pmmp.io/ci/NhanAZ-Libraries/libRegRsp/libRegRsp");
+			$this->getLogger()->error("Missing libRegRsp 1.0.5. Build this plugin with DevTools 1.0.1 and the declared virion.");
 			$this->getServer()->getPluginManager()->disablePlugin($this);
 			return;
 		}
@@ -34,6 +34,9 @@ final class Main extends PluginBase implements Listener {
 		ActorIdentifierRegistrar::register(WorldBorderEntity::class, WorldBorderEntity::IDENTIFIER);
 
 		libRegRsp::compileAndRegister($this, 'VisibleBorder Pack');
+		if(!$this->isEnabled()){
+			return;
+		}
 
 		$this->borderManager = new BorderManager($this);
 		VisibleBorderAPI::init($this->borderManager);
@@ -44,12 +47,15 @@ final class Main extends PluginBase implements Listener {
 		$this->getServer()->getPluginManager()->registerEvents($this, $this);
 		$this->getServer()->getPluginManager()->registerEvents(new PlayerMoveListener($this->borderManager), $this);
 
-		$interval = (int)$this->getConfig()->get("sync-interval-ticks", 40);
+		$intervalValue = $this->getConfig()->get("sync-interval-ticks", 40);
+		$interval = is_int($intervalValue) && $intervalValue > 0 ? $intervalValue : 40;
 		$this->getScheduler()->scheduleRepeatingTask(new BorderSyncTask($this->borderManager), $interval);
 	}
 
 	protected function onDisable() : void{
-		libRegRsp::unregister($this);
+		if(class_exists(libRegRsp::class)){
+			libRegRsp::unregister($this);
+		}
 	}
 
 	public function onJoin(PlayerJoinEvent $event) : void{
