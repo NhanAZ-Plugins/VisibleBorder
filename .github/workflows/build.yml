@@ -1,5 +1,4 @@
 name: Build
-run-name: Build - ${{ github.ref_name }} - ${{ github.event_name }}
 
 on:
   push:
