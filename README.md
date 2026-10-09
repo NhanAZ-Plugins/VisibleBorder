@@ -1,6 +1,6 @@
 # VisibleBorder
 
-VisibleBorder adds a configurable, visible world border to Axolotl-PM worlds. Version 1.0.1 targets Axolotl-PM 5.49.1 and PHP 8.1 or later.
+VisibleBorder adds a configurable, visible world border to Axolotl-PM worlds. Version 1.0.1 declares plugin API 5.0.0 and requires PHP 8.1 or later. Broader Axolotl-PM 5.x compatibility remains unverified.
 
 The plugin places a custom entity around each border and bundles a matching Bedrock resource pack. Its optional solid mode kills a player who crosses a border. Border definitions are saved in `plugin_data/VisibleBorder/borders.yml`.
 
@@ -8,7 +8,7 @@ The plugin places a custom entity around each border and bundles a matching Bedr
 
 ## Requirements
 
-- Axolotl-PM 5.49.1 with plugin API 5.0.0.
+- Axolotl-PM with plugin API 5.0.0. The exact tested server revision is pinned in the [build workflow](.github/workflows/build.yml).
 - PHP 8.1 or later with the extensions required by Axolotl-PM, including `zip`.
 - A Bedrock client that accepts the bundled resource pack to see the border.
 
@@ -16,7 +16,7 @@ The release PHAR includes [libRegRsp 1.0.5](https://github.com/NhanAZ-Libraries/
 
 ## Installation
 
-1. Download the PHAR from a successful [Build workflow](https://github.com/NhanAZ-Plugins/VisibleBorder/actions/workflows/build.yml).
+1. Download `VisibleBorder.phar` from the [v1.0.1 release](https://github.com/NhanAZ-Plugins/VisibleBorder/releases/tag/v1.0.1).
 2. Place `VisibleBorder.phar` in the Axolotl-PM `plugins` directory.
 3. Start the server, join with a Bedrock client and accept the resource pack.
 4. Run `/vb help` in game. The command requires `visibleborder.command`.
@@ -64,7 +64,7 @@ See [VisibleBorderAPI.php](src/NhanAZ/VisibleBorder/api/VisibleBorderAPI.php) fo
 
 ## Building with DevTools
 
-This repository declares libRegRsp `^1.0.5` in `devtools.yml`. CI checks out libRegRsp at a pinned commit, analyzes the plugin at PHPStan level max against Axolotl-PM 5.49.1 source, builds a standalone PHAR with [DevTools v1.0.1](https://github.com/NhanAZ/DevTools/releases/tag/v1.0.1), verifies dependency licenses and uploads the result.
+This repository declares libRegRsp `^1.0.5` in `devtools.yml`. CI checks out libRegRsp and Axolotl-PM source at pinned commits, analyzes the plugin at PHPStan level max, builds a standalone PHAR with [DevTools v1.0.1](https://github.com/NhanAZ/DevTools/releases/tag/v1.0.1), verifies dependency licenses and uploads the result.
 
 For a local build, place libRegRsp source at `virions/libRegRsp` and run:
 
