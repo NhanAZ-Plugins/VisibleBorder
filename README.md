@@ -64,7 +64,7 @@ See [VisibleBorderAPI.php](src/NhanAZ/VisibleBorder/api/VisibleBorderAPI.php) fo
 
 ## Building with DevTools
 
-This repository declares libRegRsp `^1.0.5` in `devtools.yml`. CI checks out libRegRsp and Axolotl-PM source at pinned commits, analyzes the plugin at PHPStan level max, builds a standalone PHAR with [DevTools v1.0.1](https://github.com/NhanAZ/DevTools/releases/tag/v1.0.1), verifies dependency licenses and uploads the result.
+This repository declares libRegRsp `^1.0.5` in `devtools.yml`. CI checks out libRegRsp and Axolotl-PM source at pinned commits, analyzes the plugin at PHPStan level max, builds a standalone PHAR with [DevTools](https://github.com/NhanAZ/DevTools), verifies dependency licenses and uploads the result. The workflow pins the builder revision.
 
 For a local build, place libRegRsp source at `virions/libRegRsp` and run:
 
