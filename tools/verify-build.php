@@ -6,11 +6,12 @@ $project = dirname(__DIR__);
 $artifact = $argv[1] ?? '';
 $metadataPath = $argv[2] ?? '';
 $virion = $argv[3] ?? $project . '/virions/libRegRsp';
+$expectedDevToolsVersion = $argv[4] ?? '1.0.1';
 if($artifact === '' || $metadataPath === '' || !is_file($artifact) || !is_file($metadataPath)){
 	throw new RuntimeException('Expected a PHAR and its DevTools metadata');
 }
 $metadata = json_decode((string) file_get_contents($metadataPath), true, 512, JSON_THROW_ON_ERROR);
-if(!is_array($metadata) || ($metadata['success'] ?? false) !== true || ($metadata['tool']['version'] ?? null) !== '1.0.1'){
+if(!is_array($metadata) || ($metadata['success'] ?? false) !== true || ($metadata['tool']['version'] ?? null) !== $expectedDevToolsVersion){
 	throw new RuntimeException('Unexpected DevTools build metadata');
 }
 $digest = hash_file('sha256', $artifact);
