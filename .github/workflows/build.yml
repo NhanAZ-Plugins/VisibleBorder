@@ -22,7 +22,7 @@ jobs:
         uses: actions/checkout@v7.0.1
         with:
           repository: NhanAZ-Libraries/libRegRsp
-          ref: 04766ae683a1ba63ed297730f7f2e8628aac3666
+          ref: b38f41486a4a9fb9e4691cc8ff490b62ae34a4d4 # libRegRsp v1.0.6
           path: virions/libRegRsp
           persist-credentials: false
 
@@ -55,7 +55,7 @@ jobs:
 
       - name: Build PHAR and analyze at PHPStan level max
         id: build
-        uses: NhanAZ/DevTools@v1.0.1
+        uses: NhanAZ/DevTools@8d13a75aaf4f330fdbd93737d58be9cacc41e262 # v1.0.15
         with:
           project: .
           virions: virions

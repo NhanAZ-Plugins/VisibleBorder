@@ -11,8 +11,11 @@ The plugin places a custom entity around each border and bundles a matching Bedr
 - Axolotl-PM with plugin API 5.0.0. The exact tested server revision is pinned in the [build workflow](.github/workflows/build.yml).
 - PHP 8.1 or later with the extensions required by Axolotl-PM, including `zip`.
 - A Bedrock client that accepts the bundled resource pack to see the border.
+- On Axolotl-PM API builds without a runtime setter for resource requirements, set `force_resources: true` in `resource_packs/resource_packs.yml` before starting the server.
 
-The release PHAR includes [libRegRsp 1.0.5](https://github.com/NhanAZ-Libraries/libRegRsp/releases/tag/v1.0.5). Installing that library separately is unnecessary for the release build.
+The published PHAR bundles its library dependency, so installing libRegRsp separately is unnecessary. Current source builds use the version declared in [devtools.yml](devtools.yml).
+
+The existing release PHAR has only been runtime-tested on its recorded Axolotl-PM release. Current source builds use libRegRsp 1.0.6; server behavior at the declared API floor has not yet been runtime-tested for this plugin.
 
 ## Installation
 
@@ -64,7 +67,7 @@ See [VisibleBorderAPI.php](src/NhanAZ/VisibleBorder/api/VisibleBorderAPI.php) fo
 
 ## Building with DevTools
 
-This repository declares libRegRsp `^1.0.5` in `devtools.yml`. CI checks out libRegRsp and Axolotl-PM source at pinned commits, analyzes the plugin at PHPStan level max, builds a standalone PHAR with [DevTools](https://github.com/NhanAZ/DevTools), verifies dependency licenses and uploads the result. The workflow pins the builder revision.
+This repository declares libRegRsp `^1.0.6` in `devtools.yml`. CI checks out libRegRsp and Axolotl-PM source at pinned commits, analyzes the plugin at PHPStan level max, builds a standalone PHAR with [DevTools](https://github.com/NhanAZ/DevTools), verifies dependency licenses and uploads the result. The workflow pins the builder revision.
 
 For a local build, place libRegRsp source at `virions/libRegRsp` and run:
 
