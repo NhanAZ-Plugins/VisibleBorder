@@ -6,17 +6,25 @@ $project = dirname(__DIR__);
 $artifact = $argv[1] ?? '';
 $metadataPath = $argv[2] ?? '';
 $virion = $argv[3] ?? $project . '/virions/libRegRsp';
-$expectedDevToolsVersion = $argv[4] ?? '1.0.1';
+$expectedDevToolsVersion = $argv[4] ?? '1.0.15';
 if($artifact === '' || $metadataPath === '' || !is_file($artifact) || !is_file($metadataPath)){
 	throw new RuntimeException('Expected a PHAR and its DevTools metadata');
 }
 $metadata = json_decode((string) file_get_contents($metadataPath), true, 512, JSON_THROW_ON_ERROR);
-if(!is_array($metadata) || ($metadata['success'] ?? false) !== true || ($metadata['tool']['version'] ?? null) !== $expectedDevToolsVersion){
+if(!is_array($metadata) ||
+	($metadata['schema_version'] ?? null) !== 1 ||
+	($metadata['success'] ?? false) !== true ||
+	($metadata['command'] ?? null) !== 'build' ||
+	($metadata['tool']['name'] ?? null) !== 'DevTools' ||
+	($metadata['tool']['version'] ?? null) !== $expectedDevToolsVersion){
 	throw new RuntimeException('Unexpected DevTools build metadata');
 }
 $digest = hash_file('sha256', $artifact);
 if($digest === false || $digest !== ($metadata['data']['sha256'] ?? null)){
 	throw new RuntimeException('PHAR digest does not match build metadata');
+}
+if(($metadata['data']['plugin']['name'] ?? null) !== 'VisibleBorder' || ($metadata['data']['plugin']['version'] ?? null) !== '1.0.1'){
+	throw new RuntimeException('Unexpected plugin identity in build metadata');
 }
 $phar = new Phar($artifact);
 $required = [
@@ -59,7 +67,13 @@ if($pluginLicense === false || $normalize($phar['LICENSE']->getContent()) !== $n
 if($virionLicense === false || $normalize($phar['META-INF/virions/libRegRsp/LICENSE']->getContent()) !== $normalize($virionLicense)){
 	throw new RuntimeException('libRegRsp license differs from source');
 }
-if(($metadata['data']['dependencies'][0]['version'] ?? null) !== '1.0.5'){
+$libRegRspDependencies = array_values(array_filter(
+	$metadata['data']['dependencies'] ?? [],
+	static fn(mixed $dependency): bool => is_array($dependency) && ($dependency['name'] ?? null) === 'libRegRsp',
+));
+if(count($libRegRspDependencies) !== 1 ||
+	($libRegRspDependencies[0]['version'] ?? null) !== '1.0.6' ||
+	($libRegRspDependencies[0]['antigen'] ?? null) !== 'NhanAZ\\libRegRsp'){
 	throw new RuntimeException('Unexpected libRegRsp version');
 }
 echo "VisibleBorder PHAR verification passed\n";
