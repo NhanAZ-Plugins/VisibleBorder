@@ -22,7 +22,7 @@ final class Main extends PluginBase implements Listener {
 
 	protected function onEnable() : void{
 		if(!class_exists(libRegRsp::class)){
-			$this->getLogger()->error("Missing libRegRsp 1.0.5. Build this plugin with DevTools 1.0.1 and the declared virion.");
+			$this->getLogger()->error("The libRegRsp virion is missing from this PHAR. Rebuild with DevTools using devtools.yml.");
 			$this->getServer()->getPluginManager()->disablePlugin($this);
 			return;
 		}
