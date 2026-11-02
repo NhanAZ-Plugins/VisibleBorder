@@ -222,7 +222,8 @@ final class BorderManager {
 			[],
 			$meta->getAll(),
 			new PropertySyncData([], []),
-			[]
+			[],
+			null
 		);
 		$player->getNetworkSession()->sendDataPacket($pk);
 		$this->activeBorders[$pid][$key] = $rid;
