@@ -30,7 +30,7 @@ jobs:
         uses: actions/checkout@v7.0.1
         with:
           repository: axolotl-pm/PocketMine-MP
-          ref: dfe0d07e48a9e8d5a4a242fa43ff1cd3b743a955
+          ref: e881fc1bc1c401545baf6bd1f824e41ff3f57bd1
           path: .devtools-dependencies/axolotl-pm
           persist-credentials: false
 
@@ -55,7 +55,7 @@ jobs:
 
       - name: Build PHAR and analyze at PHPStan level max
         id: build
-        uses: NhanAZ/DevTools@8d13a75aaf4f330fdbd93737d58be9cacc41e262 # v1.0.15
+        uses: NhanAZ/DevTools@v2 # v2
         with:
           project: .
           virions: virions
