@@ -55,7 +55,7 @@ jobs:
 
       - name: Build PHAR and analyze at PHPStan level max
         id: build
-        uses: NhanAZ/DevTools@v2 # v2
+        uses: NhanAZ/DevTools@v2.1.1
         with:
           project: .
           virions: virions
