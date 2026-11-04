@@ -1,10 +1,15 @@
 # VisibleBorder
 
-VisibleBorder adds a configurable, visible world border to Axolotl-PM worlds. Version 1.0.1 declares plugin API 5.0.0 and requires PHP 8.1 or later. Broader Axolotl-PM 5.x compatibility remains unverified.
+Visible world borders for Axolotl-PM with optional crossing enforcement
 
-The plugin places a custom entity around each border and bundles a matching Bedrock resource pack. Its optional solid mode kills a player who crosses a border. Border definitions are saved in `plugin_data/VisibleBorder/borders.yml`.
+[![CI](https://github.com/NhanAZ-Plugins/VisibleBorder/actions/workflows/build.yml/badge.svg)](https://github.com/NhanAZ-Plugins/VisibleBorder/actions/workflows/build.yml)
+[![Latest release](https://img.shields.io/github/v/release/NhanAZ-Plugins/VisibleBorder)](https://github.com/NhanAZ-Plugins/VisibleBorder/releases/latest)
+[![License](https://img.shields.io/github/license/NhanAZ-Plugins/VisibleBorder)](https://github.com/NhanAZ-Plugins/VisibleBorder/blob/main/LICENSE)
+[![Discord](https://img.shields.io/discord/986553214889517088?label=Discord&logo=discord&logoColor=white&color=5865F2)](https://discord.gg/j2X83ujT6c)
 
-![A VisibleBorder example in Minecraft](https://github.com/user-attachments/assets/b6014adc-f7f2-4f7e-82ec-c983e8652187)
+## Overview
+
+This plugin targets the PocketMine-MP and Axolotl-PM API 5 ecosystem and is maintained under [NhanAZ-Plugins](https://github.com/NhanAZ-Plugins).
 
 ## Requirements
 
