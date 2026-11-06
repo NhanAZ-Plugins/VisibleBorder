@@ -6,7 +6,7 @@ $project = dirname(__DIR__);
 $artifact = $argv[1] ?? '';
 $metadataPath = $argv[2] ?? '';
 $virion = $argv[3] ?? $project . '/virions/libRegRsp';
-$expectedDevToolsVersion = $argv[4] ?? '2.1.1';
+$expectedDevToolsVersion = $argv[4] ?? '3.0.0';
 if($artifact === '' || $metadataPath === '' || !is_file($artifact) || !is_file($metadataPath)){
 	throw new RuntimeException('Expected a PHAR and its DevTools metadata');
 }
