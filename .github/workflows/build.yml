@@ -55,7 +55,7 @@ jobs:
 
       - name: Build PHAR and analyze at PHPStan level max
         id: build
-        uses: AxolotlBucketLabs/DevTools@v3
+        uses: AxolotlBucketLabs/DevTools@latest
         with:
           project: .
           virions: virions
